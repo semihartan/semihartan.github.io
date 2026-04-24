@@ -1,4 +1,4 @@
-baseURL = 'http://semihartan.com.tr/'
+baseURL = 'https://semihartan.com.tr/'
 locale = 'tr-tr'
 title = 'Semih Artan Blog'
 
