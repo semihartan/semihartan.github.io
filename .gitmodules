@@ -1,0 +1,6 @@
+[submodule "themes/clean-white"]
+	path = themes/clean-white
+	url = https://github.com/zhaohuabing/hugo-theme-cleanwhite.git
+[submodule "themes/hugo-book"]
+	path = themes/hugo-book
+	url = https://github.com/alex-shpak/hugo-book
