@@ -1,5 +1,5 @@
 {{ define "main" }}
-  <h1>{{ (urls.Parse site.BaseURL).Hostname }}</h1>
+  <h1>www.{{ (urls.Parse site.BaseURL).Hostname }}</h1>
   {{ range .Site.RegularPages }}
     
   {{ end }}
