@@ -1,0 +1,19 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    asciidoctor (2.0.26)
+    rouge (4.7.0)
+
+PLATFORMS
+  x64-mingw-ucrt
+
+DEPENDENCIES
+  asciidoctor
+  rouge
+
+CHECKSUMS
+  asciidoctor (2.0.26) sha256=16e3accf1fc206bbd6335848649d7fd65f31d2daa60d85af13d47a8ee4b071c1
+  rouge (4.7.0) sha256=dba5896715c0325c362e895460a6d350803dbf6427454f49a47500f3193ea739
+
+BUNDLED WITH
+  4.0.6
