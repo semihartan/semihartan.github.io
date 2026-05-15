@@ -43,6 +43,8 @@ jobs:
           && sudo dpkg -i ${{ runner.temp }}/hugo.deb
       - name: Install Dart Sass
         run: sudo snap install dart-sass
+      - name: Install Asciidoctor
+        run: sudo gem install asciidoctor
       - name: Checkout
         uses: actions/checkout@v4
         with:
