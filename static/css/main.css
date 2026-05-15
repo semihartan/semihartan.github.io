@@ -1,12 +1,44 @@
+.visible {
+    visibility: visible;
+}
+
+.hidden {
+    visibility: hidden;
+}
+
+html {
+    font-size: 15px;
+    font-weight: 500;
+    font-style: normal;
+}
+
 body {
     background-color: #e4e4e4;
-    font-family: "DejaVu Serif", "Arial", Times, serif;
+    font-family: "DejaVu Serif Condensed", serif;
+    position: relative;
+}
+
+
+#image-viewer {
+    position: fixed !important;
+    top: 0px;
+    left: 0px;
+    background-color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    z-index: 999;
+}
+
+#image-viewer > img {
+    width: 100%;
 }
 
 #main-container {
     background-color: rgb(255, 255, 255);
-    width: 75%;
-    max-width: 1200px;
+    width: 100%;
     margin-inline: auto;
     border-color: black;
     border-width: 1px;
@@ -14,14 +46,431 @@ body {
     text-align: center;
 }
 
+header {
+    margin-bottom: 24px;
+    position: relative;
+}
+
+#main-container > main {
+    padding-left: 25px;
+    padding-right: 25px;
+    padding-bottom: 30px;
+    text-align: left;
+}
+
+.page-title {
+    margin-top: 32px;
+    margin-bottom: 10px;
+}
+
+.page-title-post-date {
+    margin-top: 0px;
+    margin-bottom: 0px;
+    font-size: 0.75rem;
+    font-weight: normal;
+    color: rgb(85, 85, 85);
+}
+
+.toc2 {
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.toc-list {
+    list-style-type: disc;
+    padding-inline-start: 24px;
+}
+
+.toc-list a {
+    color: blue;
+    font-size: 1.125rem;
+    font-weight:normal;
+    text-shadow: 0px 0px 1.4px #000;
+}
+
+.toc-list.level-1 {
+    padding-inline-start: 20px;
+}
+
+header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+main h1 {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+main h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+main h3, h4, h5, h6 {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
 p {
     text-align: justify;
-    text-indent: 1cm;
+    text-indent: 4vw;
     max-width: 100%;
-    line-height: 18pt;
-    font-size: 12pt;
+    line-height: 1.4;
+    font-size: 1rem;
     margin-top: 1cm;
     margin-bottom: 0;
     margin-left: auto;
     margin-right: auto;
+    margin-block-start: 1em;
+    margin-block-end: 1em;
+}
+
+pre::-webkit-scrollbar {
+    height: 8px;
+}
+
+pre::-webkit-scrollbar-thumb {
+    background: rgba(150,150,150,0.6);
+    border-radius: 4px;
+}
+
+.listing-block {
+    margin-bottom: 1rem;
+}
+
+.listing-block pre {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow-x: auto;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.copy-btn {
+    position: sticky;
+    right: 0px;
+    top: 0px;
+    align-self: flex-start;
+    z-index: 10;
+    cursor: pointer;
+    border: 1px solid #c0c0c0;
+    padding: 5px 5px;
+    border-radius: 4px;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 
+                 "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    font-size: 0.84rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .copy-btn {
+        color: #e0e0e0;
+        background-color: rgba(30, 30, 30, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .copy-btn:hover {
+        background-color: rgba(45, 45, 45, 0.95);
+        border-color: rgba(255, 255, 255, 0.35);
+        color: #ffffff;
+        opacity: 1;
+        transform: translateY(-0px);
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    .copy-btn {
+        color: #222222;
+        background-color: rgba(255, 255, 255, 0.75);
+        border: 1px solid rgba(0, 0, 0, 0.15);
+    }
+
+    .copy-btn:hover {
+        background-color: rgba(245, 245, 245, 0.95);
+        border-color: rgba(0, 0, 0, 0.25);
+        opacity: 1;
+        color: #111111;
+        transform: translateY(-0px);
+    }
+}
+
+.copy-btn.success {
+    animation: copiedPop 0.3s ease;
+}
+
+@keyframes copiedPop {
+    0% { 
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+/* SVG ikonlar */
+.copy-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.image-block {
+    display: flex;
+    justify-content: center;
+}
+
+.image-block > img {
+    width: 90%;
+    border-style: solid;
+    border-width: 1px;
+    border-color: rgb(201, 201, 201);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.listing-block pre code[data-lang="shell"]::before {
+    content: "C:\\> ";
+    color: #888; /* İşaretin rengini soluklaştırabilirsiniz */
+    user-select: none; /* Kullanıcı kodu kopyalarken bu işaretin seçilmesini engeller */
+    margin-right: 8px;
+}
+
+footer {
+    margin-top: 25px;
+    margin-bottom: 5px;
+    text-decoration: none;
+    color: rgb(85, 80, 80);
+    font-size: 0.75rem;
+}
+
+.post-collapsable-list {
+    text-align: left;
+    padding-top: 5px;
+    margin-bottom: 25px;
+}
+
+.post-collapsable-list .post-collapsable-list {
+    margin-left: 25px;
+    margin-bottom: 0px;
+}
+
+.post-collapsable-list summary {
+    cursor: pointer;
+    align-items: center;
+}
+
+.post-list-item {
+    font-size: 1.17rem;
+    font-weight: 700;
+}
+
+.post-list-item-date {
+    font-weight: normal;
+    font-size: 1rem;
+    color: rgb(160, 160, 160); 
+}
+
+a.post-list-item-title-link {
+    color: rgb(0, 102, 255);
+}
+
+li.post-list-item {
+    list-style-type: none;
+}
+
+a {
+    text-decoration: none;
+}
+
+a.post-list-item-title-link:visited {
+    color: rgb(0, 102, 255);
+}
+
+ul.post-list {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.post-collapsable-list summary::marker {
+    color: #bbb;
+}
+
+.yt-video {
+    width: 75%;
+    margin: 2rem auto; /* Centering + vertical spacing */
+    position: relative;
+}
+
+/* Target the actual video element inside the wrapper */
+.yt-video iframe {
+    width: 100% !important;
+    height: auto;
+    /* This ensures the video keeps its 16:9 shape regardless of width */
+    aspect-ratio: 16 / 9; 
+    border: none;
+    border-radius: 8px; /* Optional: adds a nice rounded look */
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 18px;
+    }
+
+    #main-container { 
+        width: 75%; 
+    }
+
+    .post-list-item {
+        font-size: 1.17rem;
+    }
+
+    p {
+        text-indent: 1.5vw;
+    }
+
+    .image-block > img {
+        width: 75%;
+    }
+
+    #main-container > main {
+        padding-left: 32px;
+        padding-right: 32px;
+    }
+
+    .copy-btn {
+        gap: 5px;
+    }
+
+    .copy-btn-content::after {
+        content: "Copy";
+    }
+
+    .copy-btn.success {
+        gap: 5px;
+    }
+
+    .copy-btn.success .copy-btn-content::after {
+        content: "Copied";
+    }
+
+    #image-viewer > img {
+        width: auto;
+        height: 100%;
+        aspect-ratio: 16/9;
+    }
+}
+
+.language-switcher {
+    font-size: 0.89rem;
+    font-weight: 600;
+    color: blue;
+    position: absolute;
+    right: 0px;
+    padding-top: 0px;
+    margin-left: 10px;
+    margin-right: 10px;
+    
+}
+
+.language-switcher ul {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 0.75rem;
+  margin: 0px;
+  padding: 0px;
+}
+
+.language-switcher li {
+  margin: 0;
+}
+
+.language-switcher a {
+  color: inherit;
+  text-decoration: none;
+  padding: 0.35em 0.65em;
+  display: inline-block;
+}
+
+@font-face {
+    font-family: 'DejaVu Serif';
+    src: url('/fonts/DejaVuSerif.woff2') format('woff2'),
+         url('/fonts/DejaVuSerif.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'DejaVu Serif';
+    src: url('/fonts/DejaVuSerif-Bold.woff2') format('woff2'),
+         url('/fonts/DejaVuSerif-Bold.woff') format('woff');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'DejaVu Serif';
+    src: url('/fonts/DejaVuSerif-BoldItalic.woff2') format('woff2'),
+         url('/fonts/DejaVuSerif-BoldItalic.woff') format('woff');
+    font-weight: bold;
+    font-style: italic;
+    font-display: swap;
+}
+
+
+@font-face {
+    font-family: 'DejaVu Serif';
+    src: url('/fonts/DejaVuSerif-Italic.woff2') format('woff2'),
+         url('/fonts/DejaVuSerif-Italic.woff') format('woff');
+    font-weight: normal;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'DejaVu Serif Condensed';
+    src: url('/fonts/DejaVuSerifCondensed.woff2') format('woff2'),
+         url('/fonts/DejaVuSerifCondensed.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'DejaVu Serif Condensed';
+    src: url('/fonts/DejaVuSerifCondensed-Bold.woff2') format('woff2'),
+         url('/fonts/DejaVuSerifCondensed-Bold.woff') format('woff');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'DejaVu Serif Condensed';
+    src: url('/fonts/DejaVuSerifCondensed-BoldItalic.woff2') format('woff2'),
+         url('/fonts/DejaVuSerifCondensed-BoldItalic.woff') format('woff');
+    font-weight: bold;
+    font-style: italic;
+    font-display: swap;
+}
+
+
+@font-face {
+    font-family: 'DejaVu Serif Condensed';
+    src: url('/fonts/DejaVuSerifCondensed-Italic.woff2') format('woff2'),
+         url('/fonts/DejaVuSerifCondensed-Italic.woff') format('woff');
+    font-weight: normal;
+    font-style: italic;
+    font-display: swap;
 }
