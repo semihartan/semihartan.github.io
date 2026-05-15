@@ -1,6 +1,12 @@
 {{ define "main" }}
-  <h1>www.{{ (urls.Parse site.BaseURL).Hostname }}</h1>
-  {{ range .Site.RegularPages }}
-    
+  {{ $debug :=  0 }}
+  
+  {{ .Content }}
+  {{ partial "list-sections.html" (where .Sections "Section" "notes") }}
+
+  {{ partial "list-sections.html" (where .Sections "Section" "blog") }}
+
+  {{ if $debug }}
+    {{ partial "unordered-list.html" (dict "list" .Site.Pages "item_partial" "get-page-attrs.html" "ul_class" "post-list" "li_class" "post-list-item") }}
   {{ end }}
 {{ end }}

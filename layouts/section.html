@@ -1,0 +1,8 @@
+{{ define "main" }}
+  {{ .Content }}
+  
+  {{ partial "list-sections.html" (where .Sections "Section" "notes") }}
+
+  {{ partial "list-pages.html" . }}
+
+{{ end }}

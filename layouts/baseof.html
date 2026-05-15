@@ -1,16 +1,34 @@
+{{ $visualDebug := 0 }}
 <!DOCTYPE html>
 <html lang="{{ site.Language.Locale }}" dir="{{ or site.Language.Direction `ltr` }}">
-    {{ partial "head.html" }}
+    {{ partial "head.html" . }}
     <body>
+        {{ partial "image-viewer.html" . }}
         <div id="main-container">
-            {{ partial "header.html" }}
-        <main>
-            {{ block "main" . }}
-                This will be replaced with content from the 
-                corresponding "define" action found in the template
-                to which this base template is applied.
+            {{ partial "header.html" . }}
+            
+            {{ if $visualDebug }}
+                <div>
+                    <div id="dummy" style="margin: auto; background-color: black; display:block; width: 1in; height: 1in;"></div>
+                    <p id="dummy-p" style="margin: auto; text-align: center;"></p>
+                </div>
+                <script>
+                    const dummy = document.getElementById('dummy');
+                    const dummyP = document.getElementById('dummy-p');
+                    const style = window.getComputedStyle(dummy);
+                    dummyP.innerText += `DPR: ${window.devicePixelRatio}\n`; 
+                    dummyP.innerText += `Width: ${style.width}\n`; 
+                    dummyP.innerText += `Viewport Width: ${window.innerWidth}\n`; 
+                    dummyP.innerText += `Font Family: ${style.fontFamily}\n`; 
+                </script>
             {{ end }}
-        </main>
+            <main>
+                {{ block "main" . }}
+                    This will be replaced with content from the 
+                    corresponding "define" action found in the template
+                    to which this base template is applied.
+                {{ end }}
+            </main>
         {{ partial "footer.html" }}
         </div>
     </body>
