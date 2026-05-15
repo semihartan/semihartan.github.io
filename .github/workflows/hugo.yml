@@ -45,6 +45,8 @@ jobs:
         run: sudo snap install dart-sass
       - name: Install Asciidoctor
         run: sudo gem install asciidoctor
+      - name: Install asciidoctor-html5s
+        run: sudo gem install asciidoctor-html5s
       - name: Checkout
         uses: actions/checkout@v4
         with:
