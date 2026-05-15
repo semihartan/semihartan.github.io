@@ -2,6 +2,36 @@ baseURL = 'https://semihartan.com.tr/'
 locale = 'tr-tr'
 title = 'Semih Artan Blog'
 
+pluralizeListTitles = false
+
+defaultContentLanguage = "tr"
+defaultContentLanguageInSubdir = false
+
+[languages]
+  [languages.tr]
+    languageName = "Türkçe"
+    weight = 1
+    title = "Semih Artan Blog"
+
+  [languages.en]
+    languageName = "English"
+    weight = 2
+    title = "Semih Artan Blog"
+
+[security]
+  [security.exec]
+    allow = ['^asciidoctor$', '^python$', '^node$']
+    osEnv = ['(?i)^(PATH|PATHEXT|APPDATA|RUBYLIB|GEM_HOME|GEM_PATH)$']
+
+[markup.asciidocext]
+  extensions = ["asciidoctor-html5s"]
+  backend = "html5s"
+  workingFolderCurrent = true
+  [markup.asciidocext.attributes]
+    stem = "latexmath"
+    source-highlighter = "rouge"
+    rouge-css = "class"
 
 [params]
-  mainSections = ["home", "notes", "crm_notes", "html_notes"]
+    mainSections = ["notes", "blog"]
+    rougeTheme = "github"
