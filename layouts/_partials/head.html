@@ -1,10 +1,31 @@
  <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-    <title>{{ block "title" . }}{{ with .Params.Title }}{{ . }} | {{ end }}{{ .Site.Title }}{{ end }}</title>
+    <title>
+        {{ with .Params.Title }}
+        {{ . }} | 
+        {{ end }}
+        {{ .Site.Title }}
+    </title>
     <meta name="viewport" content="width=device-width,minimum-scale=1">
     <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{if .IsPage}}{{ .Summary }}{{ else }}{{ with .Site.Params.description }}{{ . }}{{ end }}{{ end }}{{ end }}">
     <meta name="keywords" content="Math, Computer Science, Programming, Software Engineering, Algorithm and Data Structures, C, C++, C#, x86, Assembly">
     <meta name="author" content="Semih Artan">
     <link rel="stylesheet" href={{ "css/main.css" | relURL }}>
+    <script src={{ "js/main.js" | relURL }} defer></script>
+    {{ $rouge_theme_css_file_resource_path := printf "%s-%s.css" "css/syntax" .Site.Params.rougeTheme }}
+    {{ $rouge_theme_css_file_path := printf "assets/%s" $rouge_theme_css_file_resource_path }}
+    {{ if (fileExists $rouge_theme_css_file_path) }}
+        {{ $syntaxCSS := resources.Get $rouge_theme_css_file_resource_path | minify | fingerprint }}
+        <link rel="stylesheet" href="{{ $syntaxCSS.RelPermalink }}" integrity="{{ $syntaxCSS.Data.Integrity }}" crossorigin="anonymous">
+    {{ end }}
+
+    {{ partial "math-jax.html" .}}
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet"> 
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Radley:ital@0;1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Radley:ital@0;1&display=swap" rel="stylesheet">
+
 </head>

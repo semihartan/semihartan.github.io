@@ -1,0 +1,8 @@
+{{ $item_partial := .item_partial }}
+{{ $li_class := .li_class }}
+{{ $ul_class := .ul_class }}
+<ul class="{{ $ul_class }}">
+    {{ range .list }}
+        <li class="{{ $li_class }}">{{ partial $item_partial . }}</li>
+    {{ end }}
+</ul>

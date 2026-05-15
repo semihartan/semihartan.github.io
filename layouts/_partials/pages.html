@@ -1,0 +1,11 @@
+<ul >
+    {{ range . }}
+      <li class="post-list-item">
+        <a href="{{ .RelPermalink }}">
+          <h4>
+            {{ .Title | humanize | title }}
+          </h4>
+        </a>
+      </li>
+    {{ end }}
+</ul>

@@ -1,0 +1,7 @@
+{{ if .RegularPages }}
+    {{ partial "unordered-list.html" (dict 
+    "list" .RegularPages
+    "item_partial" "get-page-list-title.html" 
+    "ul_class" "post-list" 
+    "li_class" "post-list-item") }}
+{{ end }}
