@@ -1,0 +1,78 @@
+---
+title: "Microsoft Dynamics 365'e Giriş"
+date: "2026-05-14T13:35:48+03:00"
+draft: false
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Şimdiye kadar CRM'i platformlardan bağımsız olarak ele aldık. Kavramın nereden geldiğini, ne olduğunu, hangi varlıklardan oluştuğunu, müşteri yaşam döngüsü boyunca nasıl işlediğini ve hangi türlere ayrıldığını gördük. Bu temel, herhangi bir CRM platformunun başına oturduğunuzda size yol gösterecek kadar sağlam. Şimdi ise bu evrensel bilgiyi belirli bir platforma uygulama zamanı: Microsoft Dynamics 365.
+
+Bu yazı, serinin dönüm noktasıdır. Bundan sonraki bölümlerde teknik konulara, özelleştirmelere ve kodlu geliştirmeye gireceğiz. Ama önce platformu bir bütün olarak tanımamız gerekiyor. Dynamics 365 nedir, hangi parçalardan oluşur, daha önce öğrendiğimiz CRM kavramları bu platformda nereye oturur? Bu soruları cevaplayarak başlayalım.
+
+== Dynamics 365 Nedir?
+
+Dynamics 365, Microsoft'un bulut tabanlı iş uygulamaları ailesidir. Adındaki "365" eki, Microsoft 365 (eski Office 365) ile olan entegrasyonuna ve sürekli güncellenen bulut yapısına işaret eder. Ancak Dynamics 365'i anlamak için şu ayrımı baştan yapmak gerekir: Dynamics 365 tek bir ürün değil, farklı iş ihtiyaçlarına göre şekillendirilmiş modüler uygulamalar bütünüdür.
+
+Bu uygulamalar iki ana kümeye ayrılır. İlki, Finance and Operations tarafıdır; bu küme ERP (kurumsal kaynak planlama) alanına girer; finans, tedarik zinciri, üretim, insan kaynakları gibi işlevleri kapsar. İkincisi ise Customer Engagement tarafıdır; satış, pazarlama, müşteri hizmetleri gibi doğrudan müşteriyle temas eden süreçleri yönetir. Bizim bu seride odaklanacağımız alan, müşteriyle ilişkiyi merkeze alan Customer Engagement tarafıdır. Çünkü firmanızın geliştirdiği CRM çözümleri tam olarak bu kümenin üzerine inşa edilir.
+
+Bir şirket, Dynamics 365'in yalnızca Sales modülünü alıp kullanabilir. Ya da Sales ile Customer Service'i birlikte devreye alıp, Field Service ile saha operasyonlarını da ekleyebilir. Bu modüler yapı, işletmenin ihtiyacı kadarını alıp zamanla büyümesine imkan tanır. Ve tüm bu modüller, birazdan değineceğimiz ortak bir veri platformu üzerinde çalıştığı için, bir modülde girilen veri diğerinde hemen görünür.
+
+== Microsoft Ekosistemi İçindeki Yeri
+
+Dynamics 365, Microsoft'un geniş iş uygulamaları ekosisteminin bir parçasıdır ve bu ekosistemin diğer üyeleriyle derin bağları vardır. Bunu anlamak, platformun neden bu kadar güçlü olduğunu kavramak açısından önemlidir.
+
+İlk ve en görünür bağ, Microsoft 365 iledir. Dynamics 365, Outlook ile e-posta ve takvim senkronizasyonu yapabilir; Excel ile veri alışverişinde bulunabilir; Teams üzerinden işbirliğini CRM kayıtlarının içine gömebilir. Bir satış temsilcisi, Dynamics 365'teki bir fırsat kaydından çıkmadan, doğrudan Teams üzerinden müşteriyle bir toplantı başlatabilir.
+
+İkinci bağ, Power Platform iledir. Power Apps, Power Automate ve Power BI, Dynamics 365'in düşük kodlu genişletme araçlarıdır. Standart bir Dynamics 365 uygulaması yetmediğinde, Power Apps ile özel bir tuval uygulaması oluşturulabilir; Power Automate ile karmaşık iş akışları kurulabilir; Power BI ile ileri düzey raporlar ve panolar tasarlanabilir. Bu araçlar, kullanıcıya kod yazmadan Dynamics 365'i kendi ihtiyaçlarına uyarlama gücü verir.
+
+Üçüncü bağ ise Azure iledir. Platformun arkasında Microsoft'un bulut altyapısı çalışır. Yapay zeka servisleri, bilişsel hizmetler, IoT bağlantıları gibi daha ileri senaryolar Azure üzerinden Dynamics 365'e bağlanabilir. Örneğin bir müşteri hizmetleri senaryosunda, gelen e-postaları Azure'daki bir yapay zeka modeliyle analiz edip otomatik olarak doğru departmana yönlendirmek mümkündür.
+
+== Dataverse
+
+Daha önce CRM'in merkezi bir veri tabanı etrafında döndüğünden bahsetmiştik. Dynamics 365 Customer Engagement tarafında bu merkezi veri tabanının adı Dataverse'tir. Dataverse, yalnızca bir veri tabanı değil; aynı zamanda güvenlik, iş mantığı ve veri modeli yönetimini tek bir çatı altında sunan bir hizmet katmanıdır.
+
+Dataverse'in en önemli özelliği, Dynamics 365 modülleri arasında ortak bir dil oluşturmasıdır. Sales modülünde oluşturulan bir müşteri kaydı, Customer Service modülünde aynı anda görünür. Çünkü her ikisi de aynı Dataverse tablosunu kullanır. Bu ortaklık, daha önce anlattığımız "360 derece müşteri görünümü"nün teknik olarak mümkün olmasının sebebidir.
+
+Dataverse, aynı zamanda Power Platform'un da temelidir. Power Apps ile bir uygulama yaptığınızda, Power Automate ile bir akış kurduğunuzda, veri kaynağı olarak yine Dataverse'i kullanabilirsiniz. Bu da Dynamics 365 verisine, platform dışından dahi olsa, güvenli ve kontrollü erişim sağlar. Geliştirici gözüyle baktığınızda, Dataverse hem ilişkisel bir veri tabanı gibi davranır, hem de REST API'ler üzerinden dış dünyaya açılır.
+
+== Customer Engagement Modülleri
+
+Customer Engagement kümesinde dört ana modül bulunur. Bunların her biri, müşteri yaşam döngüsünün farklı bir evresine odaklanır; ama hiçbiri diğerinden kopuk değildir. Çünkü hepsi aynı Dataverse zemini üzerinde yükselir.
+
+Sales modülü, adından da anlaşılacağı gibi satış sürecini uçtan uca yönetir. Bir satış temsilcisi, sabah bilgisayarını açtığında Dynamics 365'in Sales uygulamasına girer. Burada kendisine atanmış yeni adayları görür, üzerinde çalıştığı fırsatların durumunu kontrol eder, gün içinde araması gereken müşterilerin listesini çıkarır. Lead'den fırsata, fırsattan teklife, tekliften sözleşmeye uzanan tüm yolculuk bu modülün içinde izlenir. Satış yöneticisi ise aynı modülde, ekibinin hunisini görür; hangi temsilcinin ne kadar ciroya yakın olduğunu, hangi fırsatların tıkandığını ve bu ayki hedefin ne kadarının dolduğunu takip edebilir.
+
+Customer Service modülü, işin satış sonrası tarafını yönetir. Müşteri bir sorun yaşadığında, bu modülde bir vaka kaydı açılır. Vaka; müşteriye, ilgili ürüne ve bir öncelik seviyesine bağlanır. Hizmet ekibi, vakaları kuyruklarda görür; her vaka için tanımlanmış hizmet seviyesi anlaşmasına (SLA) göre ne kadar sürede çözüm üretilmesi gerektiğini bilir. Vaka çözüme ulaştığında kapatılır, ancak kaydı silinmez; gelecekte benzer bir sorunda referans olarak kalır. Bu modülün omni-channel özelliği, müşterinin ister e-posta atmasını ister sosyal medyadan yazmasını ister telefonla aramasını fark etmeksizin tüm temasları aynı vaka kaydı altında toplar.
+
+Marketing modülü, müşterinin henüz müşteri olmadığı andan itibaren devrededir. Pazarlama ekibi bu modülü kullanarak hedef kitle segmentleri oluşturur, e-posta kampanyaları tasarlar ve gönderir. Web sitesindeki bir formu dolduran kişi, Marketing modülü sayesinde otomatik olarak bir lead'e dönüşür. Lead'in davranışları —hangi e-postaları açtığı, hangi bağlantılara tıkladığı, hangi etkinliklere kaydolduğu— puanlanır ve belirli bir eşiği geçtiğinde satış ekibine aktarılır. Bu aktarım, pazarlama ile satış arasındaki köprüdür ve Marketing modülü bu köprünün kurallarını belirler.
+
+Field Service modülü, diğer üçünden biraz farklıdır. Bu modül, merkez ofiste değil sahada çalışan teknisyenlerin işlerini CRM'e bağlar. Bir müşteriye kurulum, bakım ya da onarım için gidilmesi gerektiğinde, bir iş emri oluşturulur. Sistem, teknisyenin lokasyonuna, yetkinliğine ve müsaitlik durumuna göre otomatik atama yapabilir; rotasını optimize edebilir. Teknisyen, mobil uygulama üzerinden iş emrini görür, gerekirse stoktan parça talep eder ve işi tamamladığında kaydı kapatır. Field Service, CRM'i yalnızca ofis içi bir araç olmaktan çıkarıp, saha operasyonlarını da müşteri deneyiminin bir parçası haline getirir.
+
+Bir işletme bu dört modülden yalnızca ihtiyaç duyduklarını lisanslayabilir. Örneğin yalnızca satış ekibini CRM'e taşımak isteyen bir firma Sales ile başlar; müşteri hizmetlerini de dahil etmek istediğinde Customer Service'i ekler. Hepsi aynı Dataverse üzerinde çalıştığı için, sonradan eklenen modül önceden girilmiş veriye anında erişir. Satışın oluşturduğu müşteri kaydı, hizmet ekibi modülü eklendiği anda onların ekranında da belirir. Bu geçiş, herhangi bir veri taşıma ya da entegrasyon projesi gerektirmez.
+
+== Model-Driven App
+
+Daha önce CRM'in veri modelini öğrenirken, her varlığın bir liste görünümü, bir detay formu ve bir hızlı oluşturma paneli olduğundan bahsetmiştik. Dynamics 365'te bu arayüzler, model-driven app yaklaşımıyla oluşturulur. Model-driven, "önce veri modelini tanımla, arayüz onun üzerine kendiliğinden gelsin" felsefesidir.
+
+Bu ne demek? Dataverse'te bir tablo (entity) oluşturduğunuzda, Dynamics 365 bu tablo için otomatik olarak bir liste sayfası, bir kayıt formu ve temel navigasyon bağlantıları üretir. Siz bu arayüzü tamamen sıfırdan kodlamazsınız; bileşenleri görsel bir tasarımcıyla düzenler, alanları sürükler, iş kuralları eklersiniz. Model-driven app'in gücü, karmaşık veri modellerini hızlıca işlevsel bir uygulamaya dönüştürebilmesidir.
+
+Bu yaklaşımın bir diğer avantajı, tutarlılıktır. Sales modülündeki bir müşteri formu ile Customer Service modülündeki aynı müşterinin formu, aynı veri modeline dayandığı için alanlar ve iş mantığı tutarlı kalır. Geliştirici olarak siz, bu formu ihtiyaca göre özelleştirirsiniz; ama temel yapı hep korunur.
+
+== Temel Varlıkların Dynamics 365'teki Karşılığı
+
+Serinin önceki yazılarında öğrendiğimiz temel varlıklar, Dynamics 365 Customer Engagement içinde aynı isimlerle veya çok yakın isimlerle hazır olarak bulunur. Bu, platforma ilk giriş yapan biri için büyük bir avantajdır; çünkü kavramsal olarak zaten bildiğiniz bir yapıyla karşılaşırsınız.
+
+Daha önce "Müşteri" olarak andığımız varlık, Dynamics 365'te Account (kurumsal müşteri) ve Contact (irtibat kişisi) olarak ikiye ayrılır. "Aday" varlığı Lead adıyla, "Fırsat" varlığı Opportunity adıyla, "Vaka" varlığı ise Case adıyla platformda yer alır. Aktivite ise tek bir varlık değil, farklı etkileşim türlerini kapsayan bir varlık ailesidir: Phone Call, Email, Appointment, Task gibi. Kampanya ise Campaign adıyla Marketing modülünün temel varlıklarındandır.
+
+Bu birebir eşleşme, evrensel CRM bilgisinin platforma nasıl aktarılacağını gösterir. Kavramları öğrenmiş biri olarak, Dynamics 365 ekranına ilk baktığınızda "bu Lead tablosu, benim bildiğim aday; bu Opportunity, satış fırsatı; bu Case de müşteri hizmetleri vakası" diyebilirsiniz. Geriye, bu hazır yapının üzerine işletmeye özel özelleştirmeleri nasıl yapacağınızı öğrenmek kalır.
+
+== Sonuç
+
+Microsoft Dynamics 365, CRM'in evrensel prensiplerini alıp modüler, bulut tabanlı ve genişletilebilir bir platforma dönüştüren bir iş uygulamaları ailesidir. Customer Engagement tarafı; Sales, Customer Service, Marketing ve Field Service modülleriyle müşteri yaşam döngüsünün tüm evrelerini kapsar. Bu modüllerin altında, Dataverse adı verilen ortak bir veri ve güvenlik katmanı çalışır. Model-driven app yaklaşımı, veri modelinden otomatik arayüz üreterek geliştirme süresini kısaltır. Ve en önemlisi, bugüne kadar platformdan bağımsız olarak öğrendiğiniz tüm CRM kavramları —müşteri, aday, fırsat, vaka, aktivite— Dynamics 365'te hazır olarak karşınıza çıkar.
+
+Artık platformu bir bütün olarak tanıdığınıza göre, sıradaki adım onu çalışırken görmek. Bir sonraki yazıda, Power Platform üzerinde bir deneme hesabı açarak kendi Dynamics 365 ortamımızı kuracak, ilk model-driven uygulamamızı ayağa kaldıracak ve platformla ilk pratik temasımızı gerçekleştireceğiz.
