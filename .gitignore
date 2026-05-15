@@ -9,5 +9,5 @@ hugo.linux
 
 /.hugo_build.lock
 
-/content/notes/html_notes/*
+/content/notes/html_notes/
 /content/blog/
