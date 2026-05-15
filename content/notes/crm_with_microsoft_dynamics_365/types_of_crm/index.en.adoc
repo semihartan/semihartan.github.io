@@ -1,0 +1,10 @@
+---
+title: "Types_of_crm"
+date: "2026-05-14T13:22:58+03:00"
+draft: false
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
