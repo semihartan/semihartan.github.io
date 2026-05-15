@@ -1,0 +1,7 @@
++++
+date = '2026-04-27T17:52:43+03:00'
+draft = false
+title = 'Notlar'
++++
+
+Bu bölüm çeşitli konular üzerine notlarımı içeriyor.
