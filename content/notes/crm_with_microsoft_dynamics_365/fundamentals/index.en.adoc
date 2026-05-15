@@ -1,0 +1,10 @@
+---
+title: "Fundamentals"
+date: "2026-05-13T18:15:31+03:00"
+draft: false
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
