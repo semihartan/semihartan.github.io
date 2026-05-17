@@ -17,7 +17,7 @@ weight: 6
 
 Bugüne kadar CRM'i tek bir bütün olarak ele aldık. Ne olduğunu, hangi varlıklardan oluştuğunu ve müşteri yaşam döngüsü boyunca nasıl işlediğini gördük. Ancak CRM, aslında tek tip bir sistem değildir. İş dünyasında CRM denince akla ilk gelen şey satış ve hizmet ekiplerinin kullandığı ekranlar olsa da, bu işin yalnızca bir yüzüdür. Perdenin arkasında, toplanan veriyi anlamlandıran analitik bir katman ve farklı ekipleri birbirine bağlayan işbirlikçi bir katman daha vardır. Bu üç katman —operasyonel, analitik ve işbirlikçi— CRM'in anatomisini oluşturur. Hangi platform kullanılırsa kullanılsın, bu ayrımı bilmek, CRM'in bütününü görmek için önemlidir. Bu yazıda her üç katmanı ayrı ayrı tanımlayacak, aralarındaki ilişkiyi ve birlikte nasıl çalıştıklarını inceleyeceğiz.
 
-== 1. Operasyonel CRM
+== Operasyonel CRM
 
 Operasyonel CRM, müşteriyle doğrudan temas içeren tüm gündelik iş süreçlerini kapsar. Satış, pazarlama ve müşteri hizmetleri departmanlarının her gün CRM ekranında yaptığı işlerin neredeyse tamamı bu katmana aittir. Bir satış temsilcisinin fırsat güncellemesi, pazarlama ekibinin toplu e-posta gönderimi, müşteri hizmetlerinin bir vaka kaydı açması operasyonel CRM'in alanına girer.
 
@@ -25,7 +25,7 @@ Operasyonel CRM, adından da anlaşılacağı gibi operasyonu yürütür. Müşt
 
 Önceki yazıda ele aldığımız müşteri yaşam döngüsü evrelerinin büyük kısmı —tanışma, değerlendirme, satın alma, kullanım— operasyonel CRM'in çatısı altında koşar. Bu yüzden operasyonel CRM, şirketin müşteriyle olan tüm anlık temaslarının kaydını tutan, onu yönlendiren ve denetleyen katmandır.
 
-== 2. Analitik CRM
+== Analitik CRM
 
 Operasyonel CRM her gün yığınla veri üretir. Hangi aday hangi kampanyadan geldi, hangi fırsat hangi aşamada ne kadar süre bekledi, hangi müşteri segmenti daha fazla vaka açıyor, hangi temsilci ne kadar ciro kapattı... Bu veriler tek başına değerlidir; ancak asıl değer bunlardan anlamlı sonuçlar çıkarabildiğinizde ortaya çıkar. İşte analitik CRM tam olarak bunu yapar.
 
@@ -35,7 +35,7 @@ Bu katman, ekran başında çalışan kişiler için büyük ölçüde görünme
 
 Müşteri yaşam boyu değeri gibi kavramlar da analitik CRM dünyasında hesaplanır. Hangi müşteriye ne kadar yatırım yapılacağı sorusu, bu tür analizlerin sonucunda stratejik bir cevaba kavuşur. Analitik CRM olmadan CRM, sadece bir kayıt sistemidir; onunla birlikte bir karar destek sistemine dönüşür.
 
-== 3. İşbirlikçi CRM
+== İşbirlikçi CRM
 
 Müşteriyle ilişki yalnızca satış, pazarlama ve hizmet ekiplerinin tekelinde değildir. Bir sözleşme sürecinde hukuk departmanının, bir faturanın düzeltilmesinde muhasebenin, ürün özelinde bir sorunda Ar-Ge'nin de müşteriyle dolaylı ya da doğrudan teması olur. Ayrıca bayi, distribütör, tedarikçi gibi iş ortakları da müşteri deneyiminin bir parçasıdır. İşbirlikçi CRM, bu farklı aktörler arasındaki bilgi akışını yöneten, departmanlar ve organizasyonlar arası sınırları ortadan kaldıran katmandır.
 
@@ -45,7 +45,7 @@ Müşteriyle ilişki yalnızca satış, pazarlama ve hizmet ekiplerinin tekelind
 
 İşbirlikçi CRM, aynı zamanda müşteriyi de sürece dahil edebilir. Müşteriye kendi vaka kayıtlarını takip edebileceği bir portal sunmak, bilgi güncellemelerini kendi başına yapmasına izin vermek, hatta bir topluluk forumu aracılığıyla diğer müşterilerle etkileşim kurmasını sağlamak, işbirlikçi CRM'in müşteri tarafındaki yansımalarıdır.
 
-== 4. Üç Katmanın Birlikte Çalışması
+== Üç Katmanın Birlikte Çalışması
 
 Bu üç katman birbirinden bağımsız değildir. Aksine, biri diğerini besleyen bir döngü içinde çalışırlar. Operasyonel CRM veriyi toplar; analitik CRM bu veriyi işler ve içgörü üretir; işbirlikçi CRM ise hem veriyi hem içgörüyü ihtiyaç duyan tüm taraflara ulaştırır.
 

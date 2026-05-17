@@ -13,61 +13,61 @@ weight: 5
 
 == Giriş
 
-Önceki yazıda CRM'in veri modelini oluşturan temel varlıkları ve bunlar arasındaki ilişkileri inceledik. Müşteri, irtibat, aday, fırsat, vaka ve aktivite gibi varlıkların her birinin ne anlama geldiğini ve birbiriyle nasıl bağlandığını gördük. Ancak bu varlıklar statik bir listeden ibaret değildir. Onları asıl anlamlı kılan, müşteriyle kurulan ilişkinin zaman içinde geçirdiği evreler boyunca sırayla ve birbiriyle etkileşim halinde devreye girmeleridir. Bu yazıda, bir müşterinin işletmeyle ilk temasından ayrılışına kadar geçen süreci —müşteri yaşam döngüsünü— ve CRM'in bu döngünün her aşamasında hangi süreçleri nasıl yönettiğini ele alıyoruz.
+Önceki yazıda CRM'in veri modelini oluşturan temel varlıkları ve bunlar arasındaki ilişkileri inceledik. Account, Contact, Lead, Opportunity, Case ve Activity gibi varlıkların her birinin ne anlama geldiğini ve birbiriyle nasıl bağlandığını gördük. Ancak bu varlıklar statik bir listeden ibaret değildir. Onları asıl anlamlı kılan, Customer'la kurulan ilişkinin zaman içinde geçirdiği evreler boyunca sırayla ve birbiriyle etkileşim halinde devreye girmeleridir. Bu yazıda, bir Customer'ın işletmeyle ilk temasından ayrılışına kadar geçen süreci —Customer yaşam döngüsünü— ve CRM'in bu döngünün her aşamasında hangi süreçleri nasıl yönettiğini ele alıyoruz.
 
-== 1. Müşteri Yaşam Döngüsü
+== Müşteri Yaşam Döngüsü
 
-Müşteri yaşam döngüsü, bir işletme ile müşteri arasındaki ilişkinin zaman içinde geçirdiği evrelerin tümüdür. Tıpkı bir insan ilişkisi gibi, müşteri ilişkisi de bir tanışma ile başlar, derinleşir, olgunlaşır ve bazen sona erer. CRM tam olarak bu döngünün her anını kayıt altına almak, yönetmek ve mümkünse iyileştirmek için vardır.
+Müşteri yaşam döngüsü, bir işletme ile Customer arasındaki ilişkinin zaman içinde geçirdiği evrelerin tümüdür. Tıpkı bir insan ilişkisi gibi, Customer ilişkisi de bir tanışma ile başlar, derinleşir, olgunlaşır ve bazen sona erer. CRM tam olarak bu döngünün her anını kayıt altına almak, yönetmek ve mümkünse iyileştirmek için vardır.
 
 Yaşam döngüsü genellikle şu evrelerden oluşur: tanışma, değerlendirme, satın alma, kullanım ve deneyim, sadakat ve büyüme, kayıp ve geri kazanma. Her evrede farklı CRM varlıkları ve süreçleri ön plana çıkar. Şimdi bu evreleri sırayla inceleyelim.
 
-== 2. Tanışma
+== Tanışma
 
-İlişki, müşterinin işletmeyle ilk kez temas etmesiyle başlar. Bu temas bir web sitesi formu, bir fuar sohbeti, bir sosyal medya mesajı veya bir arkadaş tavsiyesi yoluyla olabilir. CRM'de bu anın karşılığı aday kaydıdır. Aday, henüz müşteri olup olmayacağı belli olmayan, ilgi göstermiş bir kişi ya da kurum hakkında toplanan ilk bilgidir.
+İlişki, Customer'ın işletmeyle ilk kez temas etmesiyle başlar. Bu temas bir web sitesi formu, bir fuar sohbeti, bir sosyal medya mesajı veya bir arkadaş tavsiyesi yoluyla olabilir. CRM'de bu anın karşılığı Lead kaydıdır. Lead, henüz Customer olup olmayacağı belli olmayan, ilgi göstermiş bir kişi ya da kurum hakkında toplanan ilk bilgidir.
 
-Bu evrede CRM'in görevi, adayın nereden geldiğini kaydetmek ve onu bir sonraki aşamaya hazırlamaktır. Hangi kampanyadan etkilendiği, hangi kanaldan ulaştığı, ilk teması kiminle kurduğu gibi soruların cevabı aday kaydına işlenir. Pazarlama ekibi burada devrededir; adayı puanlar, ilgi düzeyini ölçer ve yeterince olgunlaştığında satışa aktarır. Bu aktarım, CRM'de adayın bir müşteri ve irtibat kaydına dönüştürülmesiyle gerçekleşir. Dönüşüm, pazarlama ile satış arasındaki bayrak yarışının kritik anıdır.
+Bu evrede CRM'in görevi, Lead'in nereden geldiğini kaydetmek ve onu bir sonraki aşamaya hazırlamaktır. Hangi Campaign'den etkilendiği, hangi kanaldan ulaştığı, ilk teması kiminle kurduğu gibi soruların cevabı Lead kaydına işlenir. Pazarlama ekibi burada devrededir; Lead'i puanlar, ilgi düzeyini ölçer ve yeterince olgunlaştığında satışa aktarır. Bu aktarım, CRM'de Lead'in bir Account ve Contact kaydına dönüştürülmesiyle gerçekleşir. Dönüşüm, pazarlama ile satış arasındaki bayrak yarışının kritik anıdır.
 
-== 3. Değerlendirme
+== Değerlendirme
 
-Tanışma evresi başarıyla geçildiğinde, müşteri adayı artık bir irtibat olarak CRM'de yerini alır ve ilişki değerlendirme evresine girer. Bu evrede müşteri, işletmenin ne sunduğunu anlamaya çalışır; işletme ise müşterinin neye ihtiyacı olduğunu keşfeder. Karşılıklı bir tanıma sürecidir.
+Tanışma evresi başarıyla geçildiğinde, Customer adayı artık bir Contact olarak CRM'de yerini alır ve ilişki değerlendirme evresine girer. Bu evrede Customer, işletmenin ne sunduğunu anlamaya çalışır; işletme ise Customer'ın neye ihtiyacı olduğunu keşfeder. Karşılıklı bir tanıma sürecidir.
 
-CRM'de bu evrenin temel varlığı fırsat kaydıdır. Satış temsilcisi, müşteriyle yaptığı her görüşmeyi, ihtiyaç analizini ve sunduğu çözüm önerisini fırsat kaydına işler. Fırsat, satış hunisinin bir parçası olarak belirli aşamalardan geçer: keşif, ihtiyaç analizi, teklif hazırlama, görüşme, pazarlık gibi. Her aşamanın süresi ve başarı oranı CRM üzerinden takip edilebilir.
+CRM'de bu evrenin temel varlığı Opportunity kaydıdır. Satış temsilcisi, Customer'la yaptığı her görüşmeyi, ihtiyaç analizini ve sunduğu çözüm önerisini Opportunity kaydına işler. Opportunity, satış hunisinin bir parçası olarak belirli aşamalardan geçer: keşif, ihtiyaç analizi, teklif hazırlama, görüşme, pazarlık gibi. Her aşamanın süresi ve başarı oranı CRM üzerinden takip edilebilir.
 
-Bu evrede aktivite kayıtları yoğunlaşır. Her telefon görüşmesi, her e-posta, her toplantı notu fırsata bağlanır. Böylece satış yöneticisi, bir fırsatın neden ilerlemediğini veya neden kazanıldığını somut verilerle görebilir.
+Bu evrede Activity kayıtları yoğunlaşır. Her telefon görüşmesi, her e-posta, her toplantı notu Opportunity'e bağlanır. Böylece satış yöneticisi, bir Opportunity'nin neden ilerlemediğini veya neden kazanıldığını somut verilerle görebilir.
 
-== 4. Satın Alma
+== Satın Alma
 
-Değerlendirme evresinin sonunda müşteri satın alma kararı verir. Bu, fırsat kaydının kazanıldı olarak kapatılmasıyla CRM'de resmileşir. Fırsatın kapanması, yalnızca bir kaydın güncellenmesi değildir; aynı zamanda bir dizi yeni sürecin de başlangıcıdır. Siparişin işlenmesi, sözleşmenin hazırlanması, ürünün teslimi gibi adımlar genellikle ERP veya muhasebe sistemine devredilir. CRM bu noktada entegrasyon yeteneğini kullanarak diğer sistemlerle konuşur; müşteri bilgisi ve satış koşulları hatasızca aktarılır.
+Değerlendirme evresinin sonunda Customer satın alma kararı verir. Bu, Opportunity kaydının kazanıldı olarak kapatılmasıyla CRM'de resmileşir. Opportunity'nin kapanması, yalnızca bir kaydın güncellenmesi değildir; aynı zamanda bir dizi yeni sürecin de başlangıcıdır. Siparişin işlenmesi, sözleşmenin hazırlanması, ürünün teslimi gibi adımlar genellikle ERP veya muhasebe sistemine devredilir. CRM bu noktada entegrasyon yeteneğini kullanarak diğer sistemlerle konuşur; Customer bilgisi ve satış koşulları hatasızca aktarılır.
 
 Satın alma evresi, ilişkinin en somut çıktısının alındığı andır. Ancak CRM açısından bakıldığında, asıl iş buradan sonra başlar. Çünkü satın alma, bir son değil, uzun vadeli bir ilişkinin başlangıcıdır.
 
-== 5. Kullanım ve Deneyim
+== Kullanım ve Deneyim
 
-Müşteri ürünü ya da hizmeti kullanmaya başladığında, ilişki yeni bir boyuta geçer. Artık satışın değil, müşteri hizmetlerinin ön planda olduğu bir evrededir. Bu evrede müşteri sorular sorar, sorunlar yaşar, talepler iletir. CRM'de bunların karşılığı vaka kaydıdır.
+Customer ürünü ya da hizmeti kullanmaya başladığında, ilişki yeni bir boyuta geçer. Artık satışın değil, müşteri hizmetlerinin ön planda olduğu bir evrededir. Bu evrede Customer sorular sorar, sorunlar yaşar, talepler iletir. CRM'de bunların karşılığı Case kaydıdır.
 
-Vaka yönetimi, bu evrenin temel sürecidir. Müşteri bir sorun bildirdiğinde, hizmet ekibi CRM'de bir vaka açar; vakaya bir öncelik atar, müşteriye bir çözüm süresi taahhüt eder ve süreci adım adım takip eder. Vaka kapatıldığında, çözüm bilgisi sistemde kalır. Aynı sorun bir daha yaşandığında, ekip geçmiş vakaya bakarak çok daha hızlı çözüm üretebilir.
+Case yönetimi, bu evrenin temel sürecidir. Customer bir sorun bildirdiğinde, hizmet ekibi CRM'de bir Case açar; Case'e bir öncelik atar, Customer'a bir çözüm süresi taahhüt eder ve süreci adım adım takip eder. Case kapatıldığında, çözüm bilgisi sistemde kalır. Aynı sorun bir daha yaşandığında, ekip geçmiş Case'e bakarak çok daha hızlı çözüm üretebilir.
 
-Kullanım evresi, aynı zamanda müşterinin işletme hakkındaki izleniminin şekillendiği evredir. Sorunu hızlı çözülen bir müşteri güven duyar; çözümü geciken bir müşteri ise alternatif aramaya başlar. CRM, hizmet kalitesini ölçmek için bu evrede veri üretir: ortalama çözüm süresi, ilk temasta çözülen vakaların oranı, müşteri memnuniyet puanları gibi metrikler buradan gelir.
+Kullanım evresi, aynı zamanda Customer'ın işletme hakkındaki izleniminin şekillendiği evredir. Sorunu hızlı çözülen bir Customer güven duyar; çözümü geciken bir Customer ise alternatif aramaya başlar. CRM, hizmet kalitesini ölçmek için bu evrede veri üretir: ortalama çözüm süresi, ilk temasta çözülen Case'lerin oranı, Customer memnuniyet puanları gibi metrikler buradan gelir.
 
-== 6. Sadakat ve Büyüme
+== Sadakat ve Büyüme
 
-Kullanım evresinde olumlu deneyim yaşayan müşteri, zamanla sadık bir müşteriye dönüşür. Sadakat evresi, ilişkinin en kârlı olduğu evredir; çünkü mevcut müşteriye yeni ürünler satmak, yeni müşteri kazanmaktan çok daha az maliyetlidir. CRM bu evrede çapraz satış ve ek satış fırsatlarını besler.
+Kullanım evresinde olumlu deneyim yaşayan Customer, zamanla sadık bir Customer'a dönüşür. Sadakat evresi, ilişkinin en kârlı olduğu evredir; çünkü mevcut Customer'a yeni ürünler satmak, yeni Customer kazanmaktan çok daha az maliyetlidir. CRM bu evrede çapraz satış ve ek satış fırsatlarını besler.
 
-Müşterinin geçmiş satın alımları, açık ve kapalı vakaları, katıldığı kampanyalar gibi veriler bir araya geldiğinde, CRM satış ekibine "bu müşteriye şimdi ne önermeliyim?" sorusunda rehberlik eder. Geçmişte entegrasyon sorunu yaşamış bir müşteriye danışmanlık paketi önermek; belirli bir ürünü kullanan müşterilere tamamlayıcı bir modülü kampanyayla duyurmak; uzun süredir alım yapmayan müşteriyi özel bir teklifle yeniden canlandırmak, CRM'in sadakat evresinde oynadığı roldür.
+Customer'ın geçmiş satın alımları, açık ve kapalı Case'leri, katıldığı Campaign'ler gibi veriler bir araya geldiğinde, CRM satış ekibine "bu Customer'a şimdi ne önermeliyim?" sorusunda rehberlik eder. Geçmişte entegrasyon sorunu yaşamış bir Customer'a danışmanlık paketi önermek; belirli bir ürünü kullanan Customer'lara tamamlayıcı bir modülü Campaign'le duyurmak; uzun süredir alım yapmayan Customer'ı özel bir teklifle yeniden canlandırmak, CRM'in sadakat evresinde oynadığı roldür.
 
-Bu evrede müşteri, artık yalnızca bir alıcı değil, aynı zamanda bir tavsiye kaynağıdır. Memnun müşterinin referansıyla gelen yeni adaylar, döngünün yeniden başlamasını sağlar. CRM, bu referans zincirini de kaydedebilir; böylece işletme, hangi müşterilerinin ne kadar yeni iş getirdiğini görebilir.
+Bu evrede Customer, artık yalnızca bir alıcı değil, aynı zamanda bir tavsiye kaynağıdır. Memnun Customer'ın referansıyla gelen yeni Lead'ler, döngünün yeniden başlamasını sağlar. CRM, bu referans zincirini de kaydedebilir; böylece işletme, hangi Customer'larının ne kadar yeni iş getirdiğini görebilir.
 
-== 7. Kayıp ve Geri Kazanma
+== Kayıp ve Geri Kazanma
 
-Her ilişki gibi, müşteri ilişkisi de sona erebilir. Müşteri artık ihtiyaç duymayabilir, rakibe geçebilir veya kötü bir deneyim sonucu ilişkiyi kesebilir. CRM'de bu, fırsatların kaybedildi olarak işaretlenmesi veya müşteri kaydının pasif duruma alınmasıyla yansıtılır.
+Her ilişki gibi, Customer ilişkisi de sona erebilir. Customer artık ihtiyaç duymayabilir, rakibe geçebilir veya kötü bir deneyim sonucu ilişkiyi kesebilir. CRM'de bu, Opportunity'lerin kaybedildi olarak işaretlenmesi veya Account kaydının pasif duruma alınmasıyla yansıtılır.
 
-Ancak kayıp evresi, CRM için bir son değil, öğrenme fırsatıdır. Kaybedilen fırsatların nedenleri raporlanabilir: fiyat mı, rakip ürün mü, zamanlama mı? Bu veriler, satış stratejisinin gözden geçirilmesini sağlar. Ayrıca kaybedilmiş müşteriler, belirli bir süre sonra yeniden kazanma kampanyalarıyla hedeflenebilir. CRM, eski müşterinin geçmişini hala sakladığı için, bu geri kazanma çabası sıfırdan başlamaz.
+Ancak kayıp evresi, CRM için bir son değil, öğrenme fırsatıdır. Kaybedilen Opportunity'lerin nedenleri raporlanabilir: fiyat mı, rakip ürün mü, zamanlama mı? Bu veriler, satış stratejisinin gözden geçirilmesini sağlar. Ayrıca kaybedilmiş Customer'lar, belirli bir süre sonra yeniden kazanma Campaign'leriyle hedeflenebilir. CRM, eski Customer'ın geçmişini hâlâ sakladığı için, bu geri kazanma çabası sıfırdan başlamaz.
 
-== 8. Evreler Arası Geçişler
+== Evreler Arası Geçişler
 
 Bu evreleri ayrı ayrı anlatırken, her birinin başında ve sonunda bir devir teslim olduğuna dikkat etmek gerekir. Tanışmadan değerlendirmeye geçerken pazarlama satışa; değerlendirmeden satın almaya geçerken satış operasyona; satın almadan kullanıma geçerken satış müşteri hizmetlerine bayrağı uzatır. CRM'in en büyük değeri, bu geçişlerde bilgi kaybını önlemektir.
 
-Bayrak teslimi yapıldığında, devralan ekip müşterinin tüm geçmişini CRM'de bulur. Müşteri hizmetleri temsilcisi, arayan müşteriye "kimsiniz, ne almıştınız, hangi teklifi kabul etmiştiniz" diye sormaz; çünkü cevaplar ekranındadır. Pazarlama ekibi, sadık müşterilere kampanya gönderirken, hangilerinin açık bir destek talebi olduğunu bilir ve onları filtreler. Bu bütünlük, yaşam döngüsü boyunca tutarlı ve kişiselleştirilmiş bir müşteri deneyimi sunmanın anahtarıdır.
+Bayrak teslimi yapıldığında, devralan ekip Customer'ın tüm geçmişini CRM'de bulur. Müşteri hizmetleri temsilcisi, arayan Customer'a "kimsiniz, ne almıştınız, hangi teklifi kabul etmiştiniz" diye sormaz; çünkü cevaplar ekranındadır. Pazarlama ekibi, sadık Customer'lara Campaign gönderirken, hangilerinin açık bir Case'i olduğunu bilir ve onları filtreler. Bu bütünlük, yaşam döngüsü boyunca tutarlı ve kişiselleştirilmiş bir Customer deneyimi sunmanın anahtarıdır.
 
 == Sonuç
 
