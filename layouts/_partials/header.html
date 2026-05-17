@@ -3,6 +3,7 @@
         <img src="{{ "img/header/header2.JPG" | relURL }}" style="width: 100%; height: auto;">
     </a>
     {{ partial "lang-switch.html" . }}
+    {{ partial "breadcrumbs.html" . }}
     <!--h1 class="site-title">www.{{ (urls.Parse site.BaseURL).Hostname }}</h1-->
     <h1 class="page-title">
         {{ if .Title }}
@@ -12,5 +13,4 @@
         {{ end }}
     </h1>
     <h5 class="page-title-post-date post-date">({{ .Date.Format "2006.01.02" }})</h5>
-    
 </header>
