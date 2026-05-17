@@ -4,6 +4,7 @@
     {{ partial "head.html" . }}
     <body>
         {{ partial "image-viewer.html" . }}
+        
         <div id="main-container">
             {{ partial "header.html" . }}
             
@@ -23,6 +24,7 @@
                 </script>
             {{ end }}
             <main>
+                {{ partial "breadcrumbs.html" . }}
                 {{ block "main" . }}
                     This will be replaced with content from the 
                     corresponding "define" action found in the template
