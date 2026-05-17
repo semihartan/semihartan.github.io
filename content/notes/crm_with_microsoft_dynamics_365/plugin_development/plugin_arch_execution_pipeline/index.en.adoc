@@ -1,0 +1,10 @@
+---
+title: "Plugin_arch_execution_pipeline"
+date: "2026-05-16T09:37:25+03:00"
+draft: false
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}

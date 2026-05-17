@@ -1,0 +1,62 @@
+---
+title: "Dataverse Veri Modeli"
+date: "2026-05-15T21:03:50+03:00"
+draft: false
+weight: 3
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+
+== Giriş
+
+Dataverse, Dynamics 365 ve Power Platform uygulamalarının ortak veri katmanıdır. Uygulamada görülen her kayıt —bir müşteri hesabı, bir satış fırsatı, bir destek talebi— Dataverse içinde bir tabloda satır olarak saklanır. Bu tabloların yapısı, aralarındaki ilişkiler ve üzerlerine uygulanan kurallar, platformun veri modelini oluşturur. Veri modelini anlamak, gerek kodsuz özelleştirme gerekse kodlu geliştirme yaparken doğru kararlar vermenin ön koşuludur. Bu yazıda Dataverse veri modelinin temel yapı taşları olan tablolar, sütunlar, ilişkiler ve anahtarlar ele alınmaktadır.
+
+== Tablolar
+
+Dataverse'te veri, tablolar içinde saklanır. Bir tablo, belirli bir iş kavramını temsil eden satırlardan oluşur. Örneğin Account tablosu müşteri kurumlarını, Contact tablosu bu kurumlardaki kişileri, Opportunity tablosu ise satış fırsatlarını tutar. Her satırın birincil anahtar (primary key) değeri, sistem tarafından GUID formatında otomatik olarak atanır.
+
+Tablolar üç ana grupta sınıflandırılır. İlki, Dynamics 365 modülleriyle birlikte gelen hazır tablolardır. Sales modülü kurulduğunda Account, Contact, Lead, Opportunity ve Case gibi tablolar Dataverse ortamında otomatik olarak oluşur. Bu tabloların her biri, ilgili iş sürecini yürütmek için gerekli alanlar, ilişkiler ve form yapılandırmalarıyla birlikte gelir.
+
+İkinci grup özel tablolardır. İşletmenin kendine özgü ihtiyaçlarını karşılamak için sonradan oluşturulur. Bir emlak şirketi Property adında bir tablo, bir sigorta şirketi Policy adında bir tablo ekleyebilir. Özel tablolar, hazır tablolarla aynı yeteneklere sahiptir; ilişkilendirilebilir, üzerlerine iş kuralları ve iş akışları tanımlanabilir.
+
+Üçüncü grup ise sanal tablolardır. Sanal tablolar, verisi Dataverse dışında bir kaynakta (örneğin bir SQL Server veri tabanında veya bir web servisinde) bulunan, ancak Dataverse içindeymiş gibi görüntülenen tablolardır. Veri Dataverse'te saklanmaz; her sorguda dış kaynaktan canlı olarak çekilir. Sanal tablolar, veriyi taşımadan entegre etme imkanı verir.
+
+Maker Portal'da Tablolar bölümüne gidildiğinde, ortamdaki tüm tablolar listelenir. Her tablonun yanında türünü belirten bir etiket bulunur: Standart, Özel veya Sanal. Bu liste üzerinden bir tabloya tıklanarak sütunları, ilişkileri ve diğer yapılandırmaları incelenebilir.
+
+== Sütunlar
+
+Her tablo, veriyi tutan sütunlardan oluşur. Sütun, bir tablodaki belirli bir veri parçasının tipini ve kurallarını tanımlar. Örneğin Account tablosundaki Name sütunu metin tipindedir, Revenue sütunu ise para birimi tipindedir.
+
+Dataverse'te sütunlar, sistem tarafından otomatik oluşturulanlar ve kullanıcı tarafından eklenenler olarak ikiye ayrılır. Her tabloda mutlaka bulunan sistem sütunları şunlardır: Created On (kaydın oluşturulma tarihi), Modified On (son değiştirilme tarihi), Created By (kaydı oluşturan kullanıcı), Modified By (kaydı son değiştiren kullanıcı) ve Owner (kaydın sahibi olan kullanıcı veya takım). Bu sütunlar silinemez veya değiştirilemez; platform tarafından yönetilir.
+
+Kullanıcı tarafından eklenen sütunlar ise ihtiyaca göre oluşturulur. Dataverse, çok sayıda veri tipini destekler. En sık kullanılanlar şöyle sıralanabilir: Tek satır metin (Single Line of Text), çok satırlı metin (Multiple Lines of Text), tam sayı (Whole Number), ondalıklı sayı (Decimal), para birimi (Currency), tarih ve saat (Date and Time), seçenek kümesi (Choice), iki seçenekli (Yes/No), resim (Image) ve dosya (File).
+
+Choice tipi özellikle önemlidir. Bu tip, kullanıcıya önceden tanımlanmış bir listeden seçim yapma imkanı verir. Örneğin bir lead'in durumu için "Yeni", "İletişimde", "Nitelikli" gibi seçenekler tanımlanabilir. Choice sütunlar iki şekilde olabilir: yerel (local) choice, yalnızca o sütuna özel seçenekler içerir; global choice ise birden fazla tabloda kullanılabilen ortak bir seçenek listesidir.
+
+Her sütunun bir veri tipi olduğu gibi, ek kısıtlamaları da vardır. Zorunlu alan (required) işareti, kaydın o sütun doldurulmadan kaydedilemeyeceğini belirtir. Maksimum uzunluk, sayısal sütunlarda minimum ve maksimum değer, varsayılan değer gibi ayarlar da sütun tanımının parçasıdır. Bu kısıtlamalar, veri kalitesini artırmak ve hatalı girişleri önlemek için kullanılır.
+
+== İlişkiler
+
+Tablolar arasındaki ilişkiler, veri modelinin en kritik parçasıdır. Bir müşteriye ait fırsatları görmek, bir fırsata bağlı aktiviteleri listelemek veya bir lead'in hangi kampanyadan geldiğini öğrenmek, ilişkiler sayesinde mümkündür. Dataverse'te üç tür ilişki tanımlanabilir.
+
+Bire-çok ilişkisi (One-to-Many), en yaygın kullanılan ilişki türüdür. Bir tablodaki bir satır, başka bir tablodaki birden fazla satırla ilişkilendirilebilir. Account ile Contact arasındaki ilişki buna örnektir: bir hesap birden fazla irtibata sahip olabilir, ancak bir irtibat yalnızca bir hesaba bağlıdır. Teknik olarak bu ilişki, çok taraftaki tabloda (Contact) bir arama sütunu (lookup) tutularak sağlanır. Arama sütunu, ilişkili olduğu satırın GUID'ini saklar.
+
+Çoka-çok ilişkisi (Many-to-Many), her iki taraftaki satırların birden fazla karşı taraftaki satırla ilişkilenebilmesini sağlar. Örneğin bir lead birden fazla kampanyadan etkilenmiş olabilir, bir kampanya da birden fazla lead'i hedeflemiş olabilir. Dataverse, çoka-çok ilişkileri otomatik olarak oluşturduğu bir ara tablo üzerinden yönetir. Bu ara tablo, iki tarafın birincil anahtarlarını birleştiren satırlar tutar. Kullanıcı bu ara tabloyu doğrudan görmez; platform, ilişkiyi sanki doğrudan bağlanmış gibi sunar.
+
+Kendiyle ilişki (Self-Referential), bir tablonun kendi içindeki satırlarla ilişkilenmesidir. Contact tablosunda bir kişinin yöneticisini yine bir Contact satırı olarak göstermek, bu ilişki türüyle yapılır. Yapısal olarak bire-çok ilişkisinden farkı yoktur; yalnızca arama sütunu aynı tabloyu işaret eder.
+
+İlişki kurulduğunda, bir taraftaki kaydın formunda diğer taraftaki ilişkili kayıtlar otomatik olarak bir alt liste (subgrid) şeklinde görünebilir. Bu, kullanıcıya müşteriyle ilgili tüm bilgiyi tek bir ekranda sunmanın temel mekanizmasıdır.
+
+== Anahtarlar
+
+Her tablo satırı, sistem tarafından atanan GUID formatında bir birincil anahtarla (primary key) tanımlanır. Bu anahtar, satırı Dataverse içinde benzersiz şekilde tanımlar ve satır referanslarının temelini oluşturur. GUID, platform tarafından otomatik üretilir ve değiştirilemez.
+
+Bazı senaryolarda, bir satırı dış sistemlerden gelen veriyle eşleştirmek gerekir. Bunun için alternatif anahtarlar (alternate keys) tanımlanır. Alternatif anahtar, bir veya birden fazla sütunun birleşiminden oluşan benzersiz bir tanımlayıcıdır. Örneğin Account tablosunda, vergi numarası veya müşteri kodu alanı alternatif anahtar olarak tanımlanabilir. Alternatif anahtar sayesinde, dış bir sistemden veri aktarılırken Upsert (güncelle veya oluştur) işlemi güvenle yapılabilir. Kayıt önce alternatif anahtar değeriyle aranır; bulunursa güncellenir, bulunamazsa yeni oluşturulur.
+
+== Sonuç
+
+Dataverse veri modeli; tablolar, sütunlar, ilişkiler ve anahtarlar olmak üzere dört temel yapı taşı üzerine kuruludur. Hazır tablolar, Dynamics 365 modüllerinin iş süreçlerini yürütür; özel tablolar ve sütunlar, platformun işletme ihtiyaçlarına göre genişletilmesini sağlar. İlişkiler, tablolar arasında anlamlı bağlantılar kurarak 360 derece müşteri görünümünün altyapısını oluşturur. Alternatif anahtarlar ise dış sistemlerle entegrasyonda veri bütünlüğünü garanti eder. Bu yapı taşlarını tanımak, hem kodsuz özelleştirmelerin hem de kodlu geliştirmenin zeminini oluşturur. Bir sonraki yazıda, Dataverse'in güvenlik modeli incelenecek; roller, iş birimleri ve erişim seviyeleri ele alınacaktır.

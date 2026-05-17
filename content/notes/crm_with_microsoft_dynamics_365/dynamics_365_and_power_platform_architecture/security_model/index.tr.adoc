@@ -1,0 +1,109 @@
+---
+title: "Güvenlik Modeli"
+date: "2026-05-15T21:15:02+03:00"
+draft: false
+weight: 4
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Dataverse, veriye erişimi denetlemek için katmanlı bir güvenlik modeli kullanır. Bu model; kimlik doğrulama, yetkilendirme, kayıt düzeyinde erişim ve alan düzeyinde erişim olmak üzere birden fazla katmanda çalışır. Her katman bir öncekinin üzerine inşa edilir ve birlikte, kullanıcıların yalnızca ihtiyaç duydukları veriye ve işlevlere erişebilmesini sağlar. Bu yazıda, güvenlik modelini oluşturan temel bileşenler —kimlik doğrulama, iş birimleri, güvenlik rolleri, kayıt tabanlı güvenlik, alan düzeyinde güvenlik ve hiyerarşi güvenliği— ayrı ayrı ele alınmaktadır.
+
+== Kimlik Doğrulama
+
+Dataverse'e erişmek isteyen her kullanıcı, önce kimliğini kanıtlamak zorundadır. Bu işlem Microsoft Entra ID (eski adıyla Azure Active Directory) tarafından yürütülür. Kullanıcı, Dynamics 365 veya Power Platform uygulamasına giriş yaptığında, Entra ID onun kimlik bilgilerini doğrular ve bir erişim belirteci (access token) üretir. Bu belirteç, sonraki tüm isteklerde kullanıcının kimliğini temsil eder.
+
+Kimlik doğrulama, güvenlik modelinin ilk kapısıdır. Bu kapıdan geçemeyen bir kullanıcı, ortamdaki hiçbir kaynağa erişemez. Ancak kimlik doğrulama tek başına yeterli değildir. Kullanıcının ortama girdikten sonra neyi görüp neyi değiştirebileceği, yetkilendirme katmanında belirlenir. Yetkilendirmenin ilk adımı ise lisanslamadır. Lisans, kullanıcının hangi Dynamics 365 modüllerine ve Power Platform bileşenlerine erişebileceğini belirleyen bir kontrol kapısıdır.[reference:0]
+
+== İş Birimleri
+
+İş birimi (business unit), Dataverse güvenlik modelinin omurgasını oluşturan hiyerarşik bir gruplandırma yapısıdır. Her Dataverse ortamı, bir kök iş birimiyle başlar. Kuruluşlar, kendi organizasyon yapılarına uygun olarak bu kökün altına yeni iş birimleri ekleyebilir. Örneğin bir şirket; Türkiye, Almanya ve ABD iş birimlerini oluşturup, Türkiye'nin altına da Satış ve Hizmet alt birimlerini yerleştirebilir.
+
+İş birimi hiyerarşisi, veri görünürlüğünü sınırlandırmanın ilk aracıdır. Bir kullanıcı, yalnızca kendi iş birimine veya erişim seviyesine bağlı olarak alt iş birimlerine ait kayıtları görebilir. Bu yapı, büyük organizasyonlarda departmanlar arası veri izolasyonu sağlamak için kullanılır. Her kullanıcı mutlaka bir iş birimine bağlıdır; iş birimi olmayan bir kullanıcı tanımlanamaz.
+
+İş birimleri aynı zamanda güvenlik rollerinin de temelini oluşturur. Bir güvenlik rolü bir kullanıcıya atandığında, rolün içindeki erişim seviyeleri, kullanıcının bağlı olduğu iş birimi hiyerarşisine göre yorumlanır. Bu ilişki, bir sonraki bölümde ayrıntılı olarak ele alınacaktır.
+
+== Güvenlik Rolleri
+
+Güvenlik rolleri, Dataverse'te yetkilendirmenin temel mekanizmasıdır. Bir güvenlik rolü; hangi tablolara erişilebileceğini, bu tablolar üzerinde hangi işlemlerin yapılabileceğini ve bu işlemlerin iş birimi hiyerarşisinde ne kadar derinlikte geçerli olacağını tanımlar.[reference:1] Kullanıcılara doğrudan rol atanabileceği gibi, takımlar aracılığıyla da rol atanabilir.
+
+=== Ayrıcalıklar
+
+Bir güvenlik rolü, her tablo için ayrı ayrı tanımlanmış ayrıcalıklardan (privileges) oluşur. Dataverse'te tablo düzeyinde kullanılabilen ayrıcalıklar şunlardır:
+
+- **Create:** Yeni bir kayıt oluşturmak için gereklidir.
+- **Read:** Bir kaydı açıp içeriğini görüntülemek için gereklidir.
+- **Write:** Mevcut bir kayıt üzerinde değişiklik yapmak için gereklidir.
+- **Delete:** Bir kaydı kalıcı olarak silmek için gereklidir.
+- **Append:** Mevcut kaydı başka bir kayda iliştirmek için gereklidir. Örneğin bir notu bir fırsata eklemek için Append ayrıcalığı gerekir.
+- **Append To:** Başka bir kaydın mevcut kayda iliştirilmesine izin vermek için gereklidir.
+- **Assign:** Bir kaydın sahipliğini başka bir kullanıcıya devretmek için gereklidir.
+- **Share:** Kendi erişimini koruyarak, bir kayda başka bir kullanıcının erişmesine izin vermek için gereklidir.[reference:2]
+
+Bu ayrıcalıklar tablo bazında tanımlanır. Bir rol, Account tablosunda Read ve Write ayrıcalıklarına sahipken, Opportunity tablosunda yalnızca Read ayrıcalığına sahip olabilir. Ayrıca kuruluşa ait (organization-owned) tablolar için Assign ve Share ayrıcalıkları kullanılamaz; çünkü bu tabloların bireysel sahibi yoktur.[reference:3]
+
+=== Erişim Seviyeleri
+
+Her ayrıcalık, bir erişim seviyesiyle (access level) birlikte tanımlanır. Erişim seviyesi, kullanıcının o ayrıcalığı iş birimi hiyerarşisinde ne kadar derinlikte kullanabileceğini belirler.[reference:4] Beş erişim seviyesi vardır:
+
+- **None:** Erişim tamamen kapalıdır.
+- **User:** Kullanıcı yalnızca kendi sahibi olduğu kayıtlara, kendisiyle paylaşılan kayıtlara ve üyesi olduğu takımla paylaşılan kayıtlara erişebilir. Son kullanıcılar için tipik erişim seviyesidir.[reference:5]
+- **Business Unit:** Kullanıcı, kendi iş birimindeki tüm kayıtlara erişebilir. Bu seviye, User seviyesini de kapsar. İş birimi yöneticileri için ayrılmıştır.[reference:6]
+- **Parent: Child Business Unit:** Kullanıcı, kendi iş birimi ve ona bağlı tüm alt iş birimlerindeki kayıtlara erişebilir. Bu seviye, Business Unit ve User seviyelerini de kapsar.[reference:7]
+- **Organization:** Kullanıcı, iş birimi hiyerarşisinden bağımsız olarak kuruluştaki tüm kayıtlara erişebilir. Bu seviye, diğer tüm seviyeleri kapsar ve yalnızca üst düzey yöneticiler için uygundur.[reference:8]
+
+Bir rol tanımlanırken, her tablo için her ayrıcalığa uygun erişim seviyesi seçilir. Örneğin bir satış temsilcisi rolünde, Account tablosu için Read ayrıcalığı Business Unit seviyesinde tanımlanırken, Write ayrıcalığı yalnızca User seviyesinde bırakılabilir. Böylece temsilci, iş birimindeki tüm hesapları görebilir ancak yalnızca kendi hesaplarını değiştirebilir.
+
+=== Kümülatif Etki
+
+Bir kullanıcıya birden fazla güvenlik rolü atanabilir. Bu durumda rollerin ayrıcalıkları toplanır ve en geniş erişime sahip olan geçerli olur. Örneğin bir kullanıcıya, yalnızca kendi kayıtlarını silme yetkisi veren bir rol ile birlikte, kuruluştaki tüm kayıtları silme yetkisi veren başka bir rol atanmışsa; kullanıcı kuruluştaki tüm kayıtları silebilir.[reference:9]
+
+Bu kümülatif yapı, rol atamalarında dikkatli olunmasını gerektirir. Özellikle System Administrator gibi geniş yetkili rollerin atanması, en az yetki prensibi (principle of least privilege) gözetilerek yapılmalıdır.
+
+=== Hazır Güvenlik Rolleri
+
+Her Dataverse ortamı, yaygın kullanıcı görevlerini karşılamak üzere önceden tanımlanmış güvenlik rolleriyle birlikte gelir. Bu roller, en az yetki prensibine göre tasarlanmıştır.[reference:10] Dataverse veri tabanına sahip ortamlarda bulunan başlıca hazır roller şunlardır:
+
+- **System Administrator:** Ortamdaki tüm veri ve kaynaklar üzerinde tam yetkiye sahiptir. Güvenlik rolleri oluşturma ve değiştirme yetkisi de bu roldedir.
+- **System Customizer:** Veri modelini özelleştirme (tablo, sütun, ilişki oluşturma) yetkisine sahiptir, ancak veriye erişim yetkisi sınırlıdır.
+- **Environment Maker:** Ortamda yeni uygulamalar, akışlar ve bağlantılar oluşturabilir; ancak Dataverse verisine erişemez.
+- **Basic User:** Uygulamaları çalıştırmak ve kendi kayıtları üzerinde temel işlemleri yapmak için gereken minimum yetkileri içerir.[reference:11]
+
+Dynamics 365 modülleri yüklendiğinde, bu hazır rollere ek olarak modüle özgü roller de ortama eklenir. Örneğin Sales modülü; Salesperson, Sales Manager, Sales Professional gibi satış sürecine özel rolleri beraberinde getirir.[reference:12]
+
+== Kayıt Tabanlı Güvenlik
+
+Güvenlik rolleri, bir kullanıcının hangi tablolara erişebileceğini belirler. Ancak aynı tablo içindeki farklı kayıtlara farklı kullanıcıların erişmesi gerekebilir. Kayıt tabanlı güvenlik (record-based security), bu ihtiyacı karşılar.
+
+Kayıt tabanlı güvenliğin temelinde sahiplik (ownership) kavramı yer alır. Dataverse'te tablolar iki sahiplik türünden birine sahiptir. Kullanıcı veya takım sahipli tablolar (user or team owned), her kaydın bir sahibi olduğu tablolardır. Account, Contact, Lead, Opportunity gibi çoğu iş tablosu bu gruba girer. Bu tablolarda kaydın sahibi, güvenlik rolü ayrıcalıkları çerçevesinde kayıt üzerinde tam kontrole sahiptir. Diğer kullanıcıların kayda erişebilmesi için kaydın onlarla paylaşılması (share) veya kullanıcının yeterli erişim seviyesine sahip bir rolünün bulunması gerekir.
+
+Kuruluş sahipli tablolar (organization owned) ise bireysel sahibi olmayan tablolardır. Product, Price List, Territory gibi referans tabloları genellikle bu gruba girer. Bu tablolarda Assign ve Share ayrıcalıkları kullanılamaz; erişim yalnızca None veya Organization seviyesinde tanımlanabilir.[reference:13][reference:14]
+
+Paylaşma (share) mekanizması, kayıt sahibinin kendi erişimini koruyarak başka bir kullanıcıya veya takıma kayda erişim hakkı vermesidir. Paylaşma işlemi, Share ayrıcalığına sahip kullanıcılar tarafından yapılabilir. Paylaşılan kayıt, hedef kullanıcının güvenlik rolüne bakılmaksızın erişilebilir hale gelir; ancak bu erişim, paylaşma sırasında belirtilen ayrıcalıklarla sınırlıdır.
+
+== Alan Düzeyinde Güvenlik
+
+Bazı senaryolarda, bir kullanıcının bir tablodaki kayıtlara erişmesine izin verilirken, o kaydın belirli alanlarını görmesi veya değiştirmesi engellenmek istenir. Alan düzeyinde güvenlik (field-level security), bu ihtiyacı karşılar.
+
+Alan düzeyinde güvenlik, tablo sütunlarının tek tek güvenlik profillerine bağlanmasıyla yapılandırılır. Bir sütun güvenlik profiline eklendiğinde, o sütun yalnızca profile atanmış kullanıcılar veya takımlar tarafından görüntülenebilir ve değiştirilebilir. Profilde olmayan kullanıcılar, kaydın diğer alanlarını görebilseler bile, korunan sütunu göremez.
+
+Örnek bir senaryoda, çalışanların maaş bilgisi Contact tablosunda tutuluyor olabilir. Bu sütun bir güvenlik profiline bağlanır ve yalnızca İK yöneticileri profile atanır. Böylece diğer tüm kullanıcılar contact kayıtlarını görebilirken, maaş alanı onlar için görünmez olur.
+
+== Hiyerarşi Güvenliği
+
+Hiyerarşi güvenliği (hierarchy security), yöneticilerin altlarındaki çalışanların verilerine erişebilmesini sağlayan ek bir güvenlik katmanıdır. İş birimleri ve güvenlik rollerinin üzerine inşa edilir ve iki model sunar: yönetici hiyerarşisi (manager hierarchy) ve pozisyon hiyerarşisi (position hierarchy).[reference:15]
+
+Yönetici hiyerarşisinde, bir yönetici doğrudan kendisine bağlı çalışanların kayıtları üzerinde tam erişime sahip olur. Doğrudan bağlı olmayan alt seviyedeki çalışanların kayıtlarında ise yalnızca okuma yetkisi bulunur. Yöneticinin bu erişimi kullanabilmesi için, rapor ettiği çalışanla aynı iş biriminde veya çalışanın iş biriminin bir üst iş biriminde yer alması gerekir.[reference:16]
+
+Pozisyon hiyerarşisi ise organizasyon şemasındaki pozisyonlara dayalıdır. Bu modelde, belirli bir pozisyona sahip kullanıcılar, hiyerarşide altlarında kalan pozisyonlardaki kullanıcıların verilerine erişebilir. Hangi pozisyonun hangi pozisyonları görebileceği, sistem yöneticisi tarafından yapılandırılır.
+
+Hiyerarşi güvenliği, özellikle satış ve hizmet ekiplerinde yöneticilerin ekip verilerini görmesini sağlamak için kullanılır. Ancak bu model, mevcut güvenlik rollerini genişletir; rollerin yerine geçmez. Bir yönetici, hiyerarşi güvenliği sayesinde altındaki çalışanların kayıtlarını görebilir; ancak bu kayıtlar üzerinde değişiklik yapabilmesi için güvenlik rolünde gerekli Write ayrıcalığının da bulunması gerekir.
+
+== Sonuç
+
+Dataverse güvenlik modeli; kimlik doğrulama, lisanslama, iş birimleri, güvenlik rolleri, kayıt tabanlı güvenlik, alan düzeyinde güvenlik ve hiyerarşi güvenliği olmak üzere iç içe geçmiş katmanlardan oluşur. Her katman, bir öncekinin üzerine eklenen yeni bir denetim seviyesi sunar. Bu katmanlı yapı, kuruluşların kendi güvenlik politikalarına uygun, esnek ve ölçeklenebilir bir erişim denetimi kurmasına imkan tanır. Bir sonraki yazıda, özelleştirmelerin paketlenmesi ve farklı ortamlar arasında taşınması için kullanılan çözümler (solutions) ve uygulama yaşam döngüsü yönetimi (ALM) konuları ele alınacaktır.

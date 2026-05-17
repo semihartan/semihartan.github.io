@@ -1,0 +1,11 @@
+---
+title: "Plugin Geliştirme"
+date: "2026-05-16T13:38:21+03:00"
+draft: false
+weight: 4
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}

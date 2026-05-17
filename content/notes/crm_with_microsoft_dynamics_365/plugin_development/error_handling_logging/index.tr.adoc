@@ -1,0 +1,142 @@
+---
+title: "Hata Yönetimi ve Loglama"
+date: "2026-05-16T13:18:10+03:00"
+draft: false
+weight: 7
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Bir plugin çalışırken işler her zaman beklendiği gibi gitmeyebilir. Veri doğrulama hatası, eksik bir alan, dış servise ulaşamama veya beklenmeyen bir sistem durumu plugin'in işleyişini kesintiye uğratabilir. Bu tür durumlarda plugin'in ne yapacağı —işlemi durdurmak mı, sadece kaydetmek mi, yoksa sessizce geçmek mi— bilinçli bir karar gerektirir. Ayrıca, üretim ortamında çalışan bir plugin'de sorun oluştuğunda, geliştiricinin olayı teşhis edebilmesi için yeterli bilgiye sahip olması gerekir. Bu yazıda, plugin'lerde hata yönetimi için kullanılan mekanizmalar ve `ITracingService` ile günlükleme ele alınmaktadır.
+
+== Hata Yönetimi
+
+Plugin'de oluşan bir hata, execution pipeline'daki konumuna bağlı olarak farklı sonuçlar doğurur. Synchronous bir plugin'de fırlatılan istisna, tüm işlemin geri alınmasına (rollback) ve kullanıcıya hata mesajı gösterilmesine yol açar. Asynchronous bir plugin'de ise hata, işlemi etkilemez; ancak plugin başarısız olur ve hata kaydı sistem günlüğüne işlenir.
+
+Hata yönetiminde temel araç `InvalidPluginExecutionException` sınıfıdır. Bu istisna, plugin'in iş mantığı gereği bilinçli olarak işlemi durdurmak istediği durumlarda kullanılır. Mesajı doğrudan son kullanıcıya gösterilir; bu nedenle açıklayıcı ve anlaşılır olması gerekir.
+
+[source,csharp]
+----
+if (string.IsNullOrEmpty(companyName))
+{
+    throw new InvalidPluginExecutionException(
+        "Şirket adı boş bırakılamaz. Lütfen bir şirket adı girin.");
+}
+----
+
+Bu istisna fırlatıldığında, synchronous bir plugin'de işlem durur, transaction geri alınır ve kullanıcı arayüzünde hata mesajı görünür. Asynchronous bir plugin'de ise işlem yine durur ancak kullanıcıya mesaj gösterilmez; hata, Sistem İşleri (System Jobs) bölümünde görüntülenir.
+
+Genel bir `Exception` fırlatmak da mümkündür; ancak bu durumda kullanıcıya teknik bir hata mesajı gösterilir. Bu, son kullanıcı deneyimi açısından önerilmez. Beklenmeyen sistem hataları, genellikle yakalanıp loglanmalı ve kullanıcıya anlamlı bir mesajla `InvalidPluginExecutionException` fırlatılmalıdır.
+
+== ITracingService
+
+Plugin çalışırken değişken değerlerini, karar noktalarını ve oluşan hataları kayıt altına almak, `ITracingService` ile mümkündür. Bu servis, plugin'in yürütme anında yazdığı iz (trace) mesajlarını toplar ve işlem tamamlandığında Dataverse'e kaydeder.
+
+Tracing servisine erişmek için `IServiceProvider`'dan talep edilir:
+
+[source,csharp]
+----
+ITracingService tracingService =
+    (ITracingService)serviceProvider.GetService(typeof(ITracingService));
+----
+
+Mesaj yazmak için `Trace` metodu kullanılır. Bu metot, string formatlamayı destekler:
+
+[source,csharp]
+----
+tracingService.Trace("Plugin başladı. Lead ID: {0}", leadId);
+tracingService.Trace("Konu: {0}, Şirket: {1}", subject, companyName);
+tracingService.Trace("İşlem tamamlandı.");
+----
+
+Trace mesajları, plugin'in her çalıştırılışında birikir ve işlem sonunda bir `PluginTraceLog` kaydına yazılır. Bu kayıt, Dataverse'te `plugintracelog` tablosunda saklanır.
+
+== Trace Log'ları Görüntüleme
+
+Plugin Trace Log kayıtları, Dataverse'in varsayılan arayüzünde doğrudan listelenmez. Görüntülemek için birkaç yol vardır. En kolayı, Plugin Registration Tool üzerinden "View Plug-in Trace Logs" seçeneğini kullanmaktır. Bu araç, belirli bir zaman aralığındaki log'ları getirir ve mesajları gösterir.
+
+Alternatif olarak, Dataverse Web API veya bir FetchXML sorgusuyla `plugintracelog` tablosu sorgulanabilir. Aşağıdaki FetchXML, son 24 saatteki log'ları getirir:
+
+[source,xml]
+----
+<fetch top='50'>
+  <entity name='plugintracelog'>
+    <attribute name='messageblock' />
+    <attribute name='createdon' />
+    <attribute name='typename' />
+    <order attribute='createdon' descending='true' />
+    <filter>
+      <condition attribute='createdon' operator='last-x-hours' value='24' />
+    </filter>
+  </entity>
+</fetch>
+----
+
+Trace log'ları, üretim ortamında her plugin çalışması için bir kayıt oluşturur. Bu nedenle, log'ların düzenli olarak temizlenmesi veya bir dış sisteme aktarılması gerekebilir. Dataverse, belirli bir saklama süresinden sonra eski log'ları otomatik olarak siler.
+
+== Try-Catch ve Loglama
+
+Gerçek dünya plugin'lerinde hata yönetimi ve loglama birlikte kullanılır. Beklenen iş mantığı hataları `InvalidPluginExecutionException` ile kullanıcıya iletilirken, beklenmeyen sistem hataları yakalanıp detaylı olarak loglanır ve kullanıcıya genel bir hata mesajı gösterilir.
+
+Aşağıdaki örnek, tipik bir plugin yapısını gösterir:
+
+[source,csharp]
+----
+public void Execute(IServiceProvider serviceProvider)
+{
+    ITracingService tracingService =
+        (ITracingService)serviceProvider.GetService(typeof(ITracingService));
+    IPluginExecutionContext context =
+        (IPluginExecutionContext)serviceProvider.GetService(
+            typeof(IPluginExecutionContext));
+
+    try
+    {
+        tracingService.Trace("Plugin başladı. Message: {0}", context.MessageName);
+
+        // İş mantığı
+        if (!context.InputParameters.Contains("Target") ||
+            !(context.InputParameters["Target"] is Entity target))
+        {
+            tracingService.Trace("Target bulunamadı, plugin sonlandı.");
+            return;
+        }
+
+        // Doğrulama
+        if (!target.Attributes.Contains("companyname"))
+        {
+            throw new InvalidPluginExecutionException(
+                "Şirket adı zorunludur.");
+        }
+
+        // Asıl iş
+        tracingService.Trace("Doğrulama başarılı, işlem yapılıyor.");
+        // ... iş mantığı ...
+        tracingService.Trace("İşlem başarıyla tamamlandı.");
+    }
+    catch (InvalidPluginExecutionException)
+    {
+        // İş mantığı hatası, olduğu gibi fırlat
+        throw;
+    }
+    catch (Exception ex)
+    {
+        tracingService.Trace("Beklenmeyen hata: {0}", ex.ToString());
+
+        throw new InvalidPluginExecutionException(
+            "İşlem sırasında beklenmeyen bir hata oluştu. " +
+            "Lütfen sistem yöneticinize başvurun.", ex);
+    }
+}
+----
+
+Bu yapıda, `InvalidPluginExecutionException` doğrudan kullanıcıya iletilirken, diğer tüm istisnalar yakalanıp trace log'a yazılır ve kullanıcıya genel bir mesaj gösterilir. Orijinal istisna, `InvalidPluginExecutionException`'ın içine inner exception olarak gömülür; böylece hem kullanıcı deneyimi korunur hem de geliştirici teşhis için yeterli bilgiye sahip olur.
+
+== Sonuç
+
+Hata yönetimi ve günlükleme, plugin geliştirmenin tamamlayıcı unsurlarıdır. `InvalidPluginExecutionException`, iş mantığı hatalarını kullanıcıya iletmenin kontrollü yolunu sunar. `ITracingService` ise plugin'in çalışma anındaki durumunu kayıt altına alarak, sorun teşhisini mümkün kılar. İkisinin birlikte kullanıldığı try-catch yapısı, hem son kullanıcı hem de geliştirici için sağlıklı bir deneyim sağlar. Bir sonraki yazıda, plugin'in özel bir türü olan Custom API geliştirme konusu ele alınacaktır.

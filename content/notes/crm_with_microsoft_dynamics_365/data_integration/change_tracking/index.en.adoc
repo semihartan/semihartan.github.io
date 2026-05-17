@@ -1,0 +1,10 @@
+---
+title: "Change_tracking"
+date: "2026-05-16T13:18:17+03:00"
+draft: false
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}

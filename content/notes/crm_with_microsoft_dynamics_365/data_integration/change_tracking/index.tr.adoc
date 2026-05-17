@@ -1,0 +1,226 @@
+---
+title: "Değişiklik Takibi"
+date: "2026-05-16T13:18:17+03:00"
+draft: false
+weight: 1
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Dış sistemlerle veri senkronizasyonu yaparken karşılaşılan en büyük sorunlardan biri, yalnızca değişen veriyi tespit edip taşımaktır. Her senkronizasyonda tüm tabloyu baştan sorgulamak, hem Dataverse üzerinde gereksiz yük oluşturur hem de ağ trafiğini şişirir. Özellikle büyük veri hacimlerinde bu yaklaşım sürdürülemez hale gelir. Dataverse, bu sorunu çözmek için değişiklik takibi (change tracking) özelliğini sunar. Bu yazıda, değişiklik takibinin ne olduğu, nasıl etkinleştirileceği ve Web API ile nasıl kullanılacağı ele alınmaktadır.
+
+== Değişiklik Takibi Nedir?
+
+Değişiklik takibi, bir tablodaki kayıtların belirli bir zamandan sonra geçirdiği değişiklikleri izlemeye yarayan bir Dataverse özelliğidir. Etkinleştirildiğinde, tablodaki her kayıt için bir sürüm numarası (`versionnumber`) ve değişiklik türünü (oluşturuldu, güncellendi, silindi) belirten bir işaret tutulur. Dış sistem, son senkronizasyon anından sonra hangi kayıtların değiştiğini sorgulayarak yalnızca bu kayıtları alabilir.
+
+Değişiklik takibi, özellikle şu senaryolarda kullanılır:
+
+- Bir veri ambarına (data warehouse) düzenli olarak Dataverse verisi aktarmak.
+- İki Dataverse ortamı arasında veri senkronizasyonu yapmak.
+- Dış bir sistemi, Dataverse'teki değişikliklerden haberdar etmek.
+- Mobil uygulamalara çevrimdışı veri indirirken yalnızca güncel kayıtları taşımak.
+
+== Etkinleştirme
+
+Değişiklik takibi, tablo düzeyinde etkinleştirilen bir özelliktir. Varsayılan olarak kapalıdır. Etkinleştirmek için Maker Portal'da ilgili tablonun özelliklerine gidilir. "Advanced options" altında "Track changes" seçeneği işaretlenir ve kaydedilir.
+
+Bu işlem, tablonun `ChangeTrackingEnabled` özelliğini `true` yapar. Etkinleştirme anından itibaren tablodaki her değişiklik —oluşturma, güncelleme, silme— sistem tarafından kaydedilmeye başlanır.
+
+Web API üzerinden etkinleştirme durumunu sorgulamak için:
+
+[source,http]
+----
+GET /api/data/v9.2/EntityDefinitions(LogicalName='account')?$select=ChangeTrackingEnabled HTTP/1.1
+----
+
+== Sorgulama
+
+Değişiklik takibi sorgulaması, standart bir Web API GET isteğine `odata.track-changes` tercih başlığı eklenerek yapılır. Bu başlık, Dataverse'e yanıta bir delta bağlantısı (delta link) eklemesini ve kayıtların değişiklik bilgilerini döndürmesini söyler.
+
+İlk istek şöyledir:
+
+[source,http]
+----
+GET /api/data/v9.2/accounts?$select=name,address1_city HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Prefer: odata.track-changes
+----
+
+Yanıt, her zamanki `value` dizisine ek olarak `@odata.deltaLink` özelliğini içerir:
+
+[source,json]
+----
+{
+    "@odata.context": "...",
+    "@odata.deltaLink": "https://myorg.api.crm.dynamics.com/api/data/v9.2/accounts?$select=name,address1_city&$deltatoken=919042%2108%2f22%2f2024%2001%3a15%3a44",
+    "value": [
+        {
+            "@odata.etag": "W/\"123456\"",
+            "accountid": "00000000-0000-0000-0000-000000000001",
+            "name": "Contoso Ltd.",
+            "address1_city": "İstanbul"
+        },
+        {
+            "@odata.etag": "W/\"789012\"",
+            "accountid": "00000000-0000-0000-0000-000000000002",
+            "name": "Fabrikam A.Ş.",
+            "address1_city": "Ankara"
+        }
+    ]
+}
+----
+
+İlk istek, tablonun o anki tüm kayıtlarını döndürür. Bu, ilk senkronizasyonun tam yükleme olarak yapılması anlamına gelir.
+
+== Artımlı Sorgulama
+
+İlk tam yüklemeden sonra, yalnızca değişen kayıtları almak için delta bağlantısı kullanılır. Delta bağlantısı, bir önceki yanıtın `@odata.deltaLink` alanından alınır ve bir sonraki istekte doğrudan bu URL çağrılır:
+
+[source,http]
+----
+GET /api/data/v9.2/accounts?$select=name,address1_city&$deltatoken=919042%2108%2f22%2f2024%2001%3a15%3a44 HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+----
+
+Bu isteğin yanıtı, yalnızca son sorgulamadan bu yana değişen kayıtları içerir. Değişen kayıtlar, `@odata.context` içinde bir değişiklik türü ek açıklamasıyla (annotation) işaretlenir:
+
+[source,json]
+----
+{
+    "@odata.context": "...$metadata#accounts(name,address1_city)/$delta",
+    "@odata.deltaLink": "https://myorg.api.crm.dynamics.com/api/data/v9.2/accounts?$select=name,address1_city&$deltatoken=919043%2108%2f22%2f2024%2005%3a30%3a12",
+    "value": [
+        {
+            "@odata.etag": "W/\"345678\"",
+            "accountid": "00000000-0000-0000-0000-000000000003",
+            "name": "Yeni Şirket",
+            "address1_city": "İzmir"
+        },
+        {
+            "@odata.context": "...$metadata#accounts/$deletedEntity",
+            "id": "00000000-0000-0000-0000-000000000002",
+            "reason": "deleted"
+        },
+        {
+            "@odata.etag": "W/\"901234\"",
+            "accountid": "00000000-0000-0000-0000-000000000001",
+            "name": "Contoso Holding",
+            "address1_city": "İstanbul"
+        }
+    ]
+}
+----
+
+Bu yanıt üç tür değişiklik içerir: yeni bir hesap oluşturulmuş (ilk kayıt), bir hesap silinmiş (`$deletedEntity` ek açıklamasıyla), bir hesap güncellenmiş (üçüncü kayıt, adı değişmiş). Yanıt ayrıca bir sonraki sorgulama için yeni bir delta bağlantısı da verir.
+
+== Web API ve FetchXML ile Kullanım
+
+Değişiklik takibi, yalnızca standart OData sorgularıyla değil, FetchXML ile de kullanılabilir. Karmaşık filtreleme veya ilişkili kayıtları sorgulama gerektiğinde FetchXML daha esnektir.
+
+FetchXML ile değişiklik takibi sorgusu yapmak için `Prefer: odata.track-changes` başlığıyla birlikte bir FetchXML POST isteği gönderilir:
+
+[source,http]
+----
+POST /api/data/v9.2/accounts/Microsoft.Dynamics.CRM.FetchExpression HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Content-Type: application/json
+Prefer: odata.track-changes
+
+{
+    "Query": "<fetch><entity name='account'><attribute name='name'/><filter><condition attribute='statecode' operator='eq' value='0'/></filter></entity></fetch>"
+}
+----
+
+Yanıt, tıpkı GET isteğinde olduğu gibi `@odata.deltaLink` ve `value` dizisi içerir. FetchXML'in getirdiği avantaj, `statecode` gibi filtreleri ve ilişkili kayıt birleştirmelerini (`link-entity`) kullanabilmektir.
+
+== C# ile Değişiklik Takibi
+
+Aşağıdaki örnek, HttpClient kullanarak değişiklik takibiyle bir tabloyu sorgular ve delta bağlantısını yönetir:
+
+[source,csharp]
+----
+public async Task<List<Entity>> GetChanges(string deltaLink = null)
+{
+    string url;
+    if (string.IsNullOrEmpty(deltaLink))
+    {
+        // İlk sorgu: tüm kayıtları al
+        url = $"{resource}/api/data/v9.2/accounts?$select=name,address1_city";
+    }
+    else
+    {
+        // Delta sorgusu: yalnızca değişenleri al
+        url = deltaLink;
+    }
+
+    HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
+    request.Headers.Authorization = 
+        new AuthenticationHeaderValue("Bearer", token);
+    request.Headers.Add("Prefer", "odata.track-changes");
+
+    HttpResponseMessage response = await httpClient.SendAsync(request);
+    string json = await response.Content.ReadAsStringAsync();
+
+    JObject result = JObject.Parse(json);
+
+    // Delta bağlantısını bir sonraki sorgu için sakla
+    NextDeltaLink = result["@odata.deltaLink"]?.ToString();
+
+    // Değişiklikleri işle
+    List<Entity> entities = new List<Entity>();
+    foreach (var item in result["value"])
+    {
+        if (item["@odata.context"]?.ToString().Contains("$deletedEntity") == true)
+        {
+            // Silinmiş kayıt
+            Guid deletedId = Guid.Parse(item["id"].ToString());
+            entities.Add(new Entity("account", deletedId) 
+            { 
+                ["isdeleted"] = true 
+            });
+        }
+        else
+        {
+            // Oluşturulmuş veya güncellenmiş kayıt
+            Entity entity = new Entity("account", 
+                Guid.Parse(item["accountid"].ToString()));
+            entity["name"] = item["name"]?.ToString();
+            entity["address1_city"] = item["address1_city"]?.ToString();
+            entity["versionnumber"] = item["@odata.etag"]?.ToString();
+            entities.Add(entity);
+        }
+    }
+
+    return entities;
+}
+----
+
+Delta bağlantısı, bir sonraki sorgulamada kullanılmak üzere saklanır. Bu bağlantı, Dataverse'in o ana kadarki değişiklikleri işaretlediği bir imleçtir. Bağlantı kaybolursa, bir sonraki sorgulama yine tam yükleme olarak yapılır.
+
+== Silme Takibi
+
+Değişiklik takibinin önemli bir parçası silinen kayıtların tespitidir. Yukarıdaki örnekte görüldüğü gibi, silinen kayıtlar `$deletedEntity` ek açıklamasıyla döner. Bu kayıtlar yalnızca `id` taşır; alan değerlerini içermez. Dış sistem, bu ID'yi kullanarak kendi veri tabanındaki ilgili kaydı silebilir veya pasif duruma alabilir.
+
+Silinen kayıtlar, delta bağlantısında yalnızca bir kez görünür. Bir sonraki delta sorgusunda aynı silinmiş kayıt tekrar dönmez.
+
+== Sınırlar
+
+Değişiklik takibinin bazı sınırları vardır. İlk olarak, her tablo için ayrı ayrı etkinleştirilmelidir. Hazır tabloların çoğunda bu özellik açıktır; ancak özel tablolarda manuel olarak açılması gerekir.
+
+Delta bağlantısının bir ömrü vardır. Dataverse, delta belirtecini belirli bir süre saklar. Bu süre aşıldığında delta bağlantısı geçersiz hale gelir ve bir sonraki sorgulama tam yükleme ile başlamak zorunda kalır. Saklama süresi Microsoft tarafından garanti edilmez; tipik olarak birkaç gündür.
+
+Değişiklik takibi, alan düzeyinde değil kayıt düzeyinde çalışır. Bir kaydın hangi alanının değiştiğini söylemez; yalnızca kaydın değiştiğini bildirir. Hangi alanın değiştiğini anlamak için dış sistemin eski ve yeni değerleri karşılaştırması gerekir.
+
+Son olarak, değişiklik takibi audit log ile karıştırılmamalıdır. Audit log, kimin ne zaman ne değiştirdiğini kaydeder. Değişiklik takibi ise yalnızca neyin değiştiğini bildirir; kullanıcı bilgisi taşımaz.
+
+== Sonuç
+
+Değişiklik takibi, Dataverse ile dış sistemler arasında verimli veri senkronizasyonunun temel mekanizmasıdır. Tablo düzeyinde etkinleştirilir ve Web API üzerinden `odata.track-changes` tercih başlığıyla sorgulanır. İlk sorgu tam yükleme yapar, sonraki sorgular yalnızca değişen kayıtları döndürür. Delta bağlantısı, artımlı senkronizasyonun sürekliliğini sağlar. Silinen kayıtlar özel bir ek açıklamayla bildirilir. Bu yetenek, özellikle veri ambarı besleme, ortamlar arası senkronizasyon ve mobil uygulama verisi indirme senaryolarında hem performans hem de kaynak kullanımı açısından kritik avantaj sağlar. Bir sonraki yazıda, alternatif anahtarlar ve upsert işlemleri ele alınacaktır.

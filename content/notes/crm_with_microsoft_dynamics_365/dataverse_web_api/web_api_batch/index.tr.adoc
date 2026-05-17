@@ -1,0 +1,172 @@
+---
+title: "Batch İşlemleri"
+date: "2026-05-16T13:18:13+03:00"
+draft: false
+weight: 3
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Tek bir HTTP isteğiyle birden çok Dataverse işlemini gerçekleştirmek, performans ve ağ verimliliği açısından önemli avantajlar sağlar. Web API'nin batch (toplu) işlem özelliği, birden çok CRUD işlemini tek bir HTTP çağrısında birleştirmeye ve sunucuya toplu olarak göndermeye olanak tanır. Bu yazıda, batch işlemlerinin yapısı, change set kavramı, istek ve yanıt formatı ile atomik ve bağımsız işlem senaryoları ele alınmaktadır.
+
+== Batch İşlemi Nedir?
+
+Batch işlemi, birden çok Web API isteğinin tek bir HTTP POST çağrısı içinde paketlenmesidir. Bu istekler sunucuda sırayla işlenir ve tüm sonuçlar tek bir yanıt gövdesinde toplanarak istemciye döndürülür. Batch işlemi, `$batch` uç noktasına yapılan bir POST isteğiyle başlatılır.
+
+Batch işleminin iki temel faydası vardır. İlki, ağ gidiş-geliş sayısını azaltmasıdır. Tek tek gönderilecek on istek, tek bir batch çağrısında birleştirilebilir. İkincisi, change set mekanizması sayesinde bir grup işlemin atomik olarak çalışmasını sağlamasıdır. Bu, ya hep ya hiç (all or nothing) prensibiyle iş mantığını güvence altına alır.
+
+== Multipart/Mixed Format
+
+Batch istekleri, HTTP'nin `multipart/mixed` medya tipini kullanır. İstek gövdesi, sınırlayıcı (boundary) dizgileriyle ayrılmış birden çok alt istekten oluşur. Her alt istek, kendi HTTP fiilini, URL'sini, başlıklarını ve isteğe bağlı olarak gövdesini taşır.
+
+Bir batch isteğinin genel yapısı şöyledir:
+
+[source,http]
+----
+POST /api/data/v9.2/$batch HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Content-Type: multipart/mixed; boundary=batch_AAA123
+Accept: application/json
+
+--batch_AAA123
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+GET /api/data/v9.2/accounts(00000000-0000-0000-0000-000000000001)?$select=name HTTP/1.1
+Accept: application/json
+
+--batch_AAA123
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /api/data/v9.2/contacts HTTP/1.1
+Content-Type: application/json
+
+{"firstname": "Ahmet", "lastname": "Yılmaz"}
+
+--batch_AAA123--
+----
+
+Bu örnekte iki bağımsız işlem vardır: bir hesap sorgulama ve bir irtibat oluşturma. Her alt istek `Content-Type: application/http` başlığıyla işaretlenir ve kendi HTTP fiilini, URL'sini ve başlıklarını içerir.
+
+== Change Set
+
+Bazı senaryolarda, bir grup işlemin atomik olarak çalışması gerekir. Örneğin bir sipariş başlığı ve ona bağlı sipariş kalemleri birlikte oluşturulmalıdır; başlık başarılı olup kalemler başarısız olursa, başlığın da geri alınması istenir. İşte change set, bu atomik grubu tanımlar.
+
+Change set, batch gövdesi içinde ayrı bir `multipart/mixed` bölümdür. Kendi sınırlayıcısı vardır ve içindeki tüm işlemler tek bir transaction içinde çalışır. Change set içindeki herhangi bir alt istek başarısız olursa, change set'teki tüm işlemler geri alınır.
+
+Aşağıdaki örnek, bir hesap ve o hesaba bağlı bir irtibatı aynı change set içinde oluşturur:
+
+[source,http]
+----
+POST /api/data/v9.2/$batch HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Content-Type: multipart/mixed; boundary=batch_AAA123
+Accept: application/json
+
+--batch_AAA123
+Content-Type: multipart/mixed; boundary=changeset_BBB456
+
+--changeset_BBB456
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /api/data/v9.2/accounts HTTP/1.1
+Content-Type: application/json
+
+{"name": "Yeni Şirket", "address1_city": "İstanbul"}
+
+--changeset_BBB456
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /api/data/v9.2/contacts HTTP/1.1
+Content-Type: application/json
+
+{"firstname": "Ahmet", "lastname": "Yılmaz", "parentcustomerid_account@odata.bind": "$1"}
+
+--changeset_BBB456--
+
+--batch_AAA123--
+----
+
+Bu yapıda, hesap ve irtibat aynı change set içinde yer alır. İrtibat, hesap oluşturulduktan sonra `$1` referansıyla yeni oluşturulan hesaba bağlanır. `$1` geçici bir etikettir ve change set içinde aynı sınırlayıcı altında yer alan istekler arasında referans vermeye yarar. Eğer hesap oluşturma başarısız olursa, irtibat işlemi de çalıştırılmaz. Eğer irtibat oluşturma başarısız olursa, hesap işlemi de geri alınır.
+
+Change set dışında kalan alt istekler, birbirinden bağımsızdır. Birinin hatası diğerini etkilemez.
+
+== Batch Yanıtı
+
+Sunucu, batch isteğini işledikten sonra yine `multipart/mixed` formatında bir yanıt döndürür. Her alt isteğe karşılık bir alt yanıt bulunur. Alt yanıtlar, isteklerin gönderildiği sırayla gelir.
+
+[source,http]
+----
+HTTP/1.1 200 OK
+Content-Type: multipart/mixed; boundary=batch_response_CCC789
+
+--batch_response_CCC789
+Content-Type: application/http
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"@odata.context": "...", "name": "Contoso Ltd."}
+
+--batch_response_CCC789
+Content-Type: application/http
+
+HTTP/1.1 204 No Content
+OData-EntityId: https://myorg.api.crm.dynamics.com/api/data/v9.2/contacts(...)
+
+--batch_response_CCC789--
+----
+
+Her alt yanıt, kendi HTTP durum kodunu ve başlıklarını taşır. İstemci, başarılı ve başarısız işlemleri bu yanıtlara bakarak tespit eder.
+
+== Change Set İçinde Referans Verme
+
+Change set içinde, daha önce oluşturulmuş bir kayda referans vermek gerekebilir. Bunun için geçici etiketler (content-ID) kullanılır. Bir istek, `Content-ID` başlığıyla etiketlenir ve sonraki istekler bu etikete `$` ön ekiyle referans verir.
+
+Yukarıdaki örnekte, hesap oluşturma isteğine bir `Content-ID` verilmemiştir; ancak aşağıdaki örnekte açıkça gösterilmiştir:
+
+[source,http]
+----
+--changeset_BBB456
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+Content-ID: 1
+
+POST /api/data/v9.2/accounts HTTP/1.1
+Content-Type: application/json
+
+{"name": "Yeni Şirket"}
+
+--changeset_BBB456
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /api/data/v9.2/contacts HTTP/1.1
+Content-Type: application/json
+
+{"firstname": "Ahmet", "lastname": "Yılmaz", "parentcustomerid_account@odata.bind": "$1"}
+----
+
+`Content-ID: 1` ile etiketlenen isteğin sonucu, `$1` ile referans alınır. `@odata.bind` eki, bir arama alanına bağlama yapıldığını belirtir.
+
+== Sınırlar
+
+Batch işlemlerinin belirli sınırları vardır. Tek bir batch isteğinde en fazla 1000 alt istek bulunabilir. Change set içinde ise en fazla 1000 işlem yer alabilir. Ayrıca, bir batch isteğinin toplam gövde boyutu sunucu tarafında sınırlıdır; bu sınır, ortam yapılandırmasına göre değişmekle birlikte tipik olarak birkaç megabayttır.
+
+Batch istekleri, synchronous olarak işlenir. Sunucu, tüm alt istekleri sırayla işler ve yanıtı oluşturur. Büyük batch istekleri zaman aşımına uğrayabilir. Bu nedenle, uzun sürecek işlemlerin batch yerine ayrı ayrı ve asenkron gönderilmesi daha uygundur.
+
+Batch içindeki change set'ler, transaction'larını Dataverse'in normal transaction sınırları içinde yönetir. Bir change set içinde en fazla 1000 işlem olabilir ve change set'in toplam işlem süresi platform tarafından sınırlandırılır.
+
+== Sonuç
+
+Batch işlemleri, Web API üzerinden birden çok Dataverse işlemini tek bir HTTP çağrısında birleştirmenin yolunu sunar. `multipart/mixed` formatıyla her alt istek kendi HTTP yapısını korur. Change set mekanizması, bir grup işlemin atomik olarak çalışmasını sağlayarak veri bütünlüğünü garanti eder. Geçici etiketlerle change set içinde kayıtlar arası referans vermek mümkündür. Bu yetenekler, özellikle dış sistem entegrasyonlarında ve toplu veri işleme senaryolarında performans ve güvenilirlik avantajı sağlar. Bir sonraki yazıda, Web API'ye erişim için gerekli olan OAuth 2.0 ile kimlik doğrulama konusu ele alınacaktır.

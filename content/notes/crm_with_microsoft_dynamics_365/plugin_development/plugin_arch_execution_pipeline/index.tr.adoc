@@ -1,0 +1,65 @@
+---
+title: "Plugin Mimarisi ve Çalışma Zamanı"
+date: "2026-05-16T09:37:25+03:00"
+draft: false
+weight: 1
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Kodsuz özelleştirme araçları birçok senaryoyu karşılasa da, her iş kuralı bu araçlarla ifade edilemez. Dış bir servise istek atmak, karmaşık bir hesaplama yapmak veya kayıt oluşturulmadan önce veriyi sistem kurallarının ötesinde denetlemek gerektiğinde, kod yazmak kaçınılmaz olur. Dynamics 365'te bu ihtiyacı karşılayan mekanizmaya plugin denir. Plugin, belirli bir olay tetiklendiğinde çalışan, C# ile yazılmış bir sunucu tarafı kod parçasıdır. Bu yazıda plugin kavramı, olay modeli ve execution pipeline'ın aşamaları ele alınmaktadır.
+
+== Plugin
+
+Plugin, Dataverse olaylarına kaydedilen ve olay gerçekleştiğinde platform tarafından otomatik olarak çağrılan bir sınıftır. Bir kayıt oluşturulurken, güncellenirken veya silinirken; bir kayıt atandığında veya durumu değiştirildiğinde plugin tetiklenebilir. Plugin, olayın gerçekleştiği bağlamı bir context nesnesi olarak alır; bu bağlam içinden tetikleyen kayda, kaydın önceki ve sonraki görüntülerine ve çağrının kim tarafından yapıldığına dair bilgilere erişir.
+
+Plugin'ler sunucu tarafında, Dataverse işlem hattının içinde çalışır. Bu, kullanıcı arayüzünden, Power Automate akışlarından veya API çağrılarından gelen tüm istekler için aynı plugin mantığının uygulanacağı anlamına gelir. İş mantığının merkezi olarak uygulanmasını sağladığı için, aynı kuralın birden fazla kanalda tekrarlanmasının önüne geçer.
+
+Plugin'ler .NET Framework ile yazılır ve derlenmiş bir assembly olarak Dataverse'e yüklenir. Yükleme sonrası Plugin Registration Tool ile belirli bir olaya ve aşamaya bağlanır.
+
+== Olay Modeli
+
+Dataverse, kayıtlar üzerinde gerçekleşen işlemleri olaylar (events) olarak ele alır. Plugin, bu olaylara abone olur. Desteklenen olaylar, temel CRUD işlemleri etrafında şekillenir. Bir kayıt oluşturulduğunda (Create), güncellendiğinde (Update), silindiğinde (Delete) veya durumu değiştirildiğinde (SetState / SetStateDynamicEntity) plugin tetiklenebilir. Bunlara ek olarak kayıt atama (Assign), kayıt paylaşma (GrantAccess, ModifyAccess, RevokeAccess), ilişki değişikliği (Associate, Disassociate) ve özel API çağrıları da birer olay olarak kullanılabilir.
+
+Her olay, execution pipeline içinde birkaç aşamadan geçer. Plugin, bu aşamalardan birine kaydedilir. Aşama seçimi, plugin'in ne zaman çalışacağını ve işlem üzerinde ne kadar kontrole sahip olacağını belirler.
+
+== Execution Pipeline
+
+Execution pipeline, bir Dataverse işleminin geçtiği aşamalar zinciridir. Bir kayıt oluşturulacağı zaman, pipeline sırayla belirli adımları işletir. Plugin geliştiricisi, bu adımlardan birine veya birkaçına plugin kaydederek işleme müdahale edebilir.
+
+Pipeline aşamaları şunlardır:
+
+=== Pre-Validation
+
+Pre-Validation, işlemin en erken aşamasıdır. Bu aşama, güvenlik kontrolleri yapılmadan önce çalışır. Bu nedenle, çağrıyı yapan kullanıcının yetkisinden bağımsız olarak çalışması gereken kontroller bu aşamaya yerleştirilebilir. Ancak bu aynı zamanda bir risktir; plugin, yetkisiz bir kullanıcıdan gelen isteği de işleyebilir. Pre-Validation aşaması, işlemin tamamen iptal edilmesi gereken erken kararlar için uygundur.
+
+=== Pre-Operation
+
+Pre-Operation, güvenlik kontrollerinden geçtikten sonra, ancak asıl veri tabanı işlemi başlamadan önce çalışır. Plugin bu aşamada, kaydedilmek üzere olan veriyi değiştirebilir. Hedef entity'nin alanlarına yeni değerler atamak, işlemi bu aşamada durdurmak veya ek doğrulamalar yapmak mümkündür. Pre-Operation, iş mantığının veri tabanına yazılmadan hemen önce uygulanması için en sık kullanılan aşamadır.
+
+Bu aşamada plugin, işlemle aynı veri tabanı işlemi (transaction) içinde çalışır. Plugin bir hata fırlatırsa, işlem geri alınır ve kayıt oluşturulmaz veya güncellenmez.
+
+=== Post-Operation
+
+Post-Operation, asıl veri tabanı işlemi başarıyla tamamlandıktan sonra çalışır. Kayıt artık veri tabanına yazılmıştır. Plugin bu aşamada, kaydın yeni halini görebilir ancak kaydı tekrar değiştirmek isterse bunu ayrı bir güncelleme işlemiyle yapması gerekir.
+
+Post-Operation da ana işlemle aynı transaction içinde çalışır. Plugin burada hata fırlatırsa, ana işlem de dahil olmak üzere tüm transaction geri alınır. Bu davranış, post-operation aşamasında yapılan yan etkilerin ana işlemin bütünlüğünü bozmamasını garanti eder.
+
+Eğer plugin'in ana işlemden bağımsız olarak, kendi hatalarıyla ana işlemi geri almadan çalışması isteniyorsa, plugin'in asynchronous olarak kaydedilmesi gerekir. Asynchronous plugin'ler ana transaction'ın dışında çalışır ve hataları ana işlemi etkilemez.
+
+=== Transaction ve Asynchronous Davranış
+
+Pipeline aşamalarının çoğu, plugin'in synchronous (eş zamanlı) veya asynchronous (eş zamansız) olarak kaydedilmesine izin verir. Synchronous plugin, ana işlemle aynı transaction içinde, işlemin bir parçası olarak çalışır. Hızlı olması beklenir; uzun süren işlemler yapmamalıdır. Çünkü kullanıcı, plugin tamamlanana kadar yanıt bekler.
+
+Asynchronous plugin ise ana işlem tamamlandıktan sonra, ayrı bir transaction içinde, arka planda çalışır. Uzun süren entegrasyon çağrıları, toplu veri işleme veya dış servis bildirimleri için uygundur. Hata alsa bile ana işlem etkilenmez.
+
+Pre-Validation ve Pre-Operation aşamaları yalnızca synchronous olarak çalışabilir. Post-Operation ise hem synchronous hem asynchronous olarak kullanılabilir.
+
+== Sonuç
+
+Plugin, Dynamics 365'in iş mantığını kodla genişletmenin birincil yoludur. Dataverse olaylarına abone olarak, işlemlerin belirli aşamalarında devreye girer. Execution pipeline; Pre-Validation, Pre-Operation ve Post-Operation aşamalarıyla plugin'in ne zaman ve hangi transaction bağlamında çalışacağını belirler. Bu mimariyi anlamak, doğru aşamada doğru işlemi yapmak ve performans sorunlarından kaçınmak için ön koşuldur. Bir sonraki yazıda, ilk plugin'in yazılması, derlenmesi ve Dataverse'e kaydedilmesi adım adım ele alınacaktır.

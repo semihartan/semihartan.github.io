@@ -1,0 +1,10 @@
+---
+title: "Model_driven_app_customization"
+date: "2026-05-16T09:34:51+03:00"
+draft: false
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}

@@ -1,0 +1,54 @@
+---
+title: "Temel Kavramlar"
+date: "2026-05-13T18:15:29+03:00"
+draft: false
+weight: 3
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Herhangi bir CRM platformunu ilk kez açan biri, arayüzde birbirine benzeyen onlarca nesneyle karşılaşır. Lead, Contact, Account, Opportunity, Case, Activity... Bu terimlerin her biri, CRM'in veri modelinde belirli bir yapıyı ve belirli bir iş sürecini temsil eder. Platformdan platforma küçük farklılıklar olsa da bu kavramların büyük çoğunluğu evrenseldir — Salesforce'ta da, HubSpot'ta da, Microsoft Dynamics 365'te de özünde aynı anlama gelirler.
+Bu bölümde bu yapı taşlarını teker teker ele alacağız. Ancak bunları birbirinden bağımsız tanımlar olarak değil, birbirine bağlı bir zincirin halkaları olarak okumak daha doğru olur.
+
+== Lead
+
+Lead, henüz tam olarak nitelenmemiş bir ilgiyi temsil eder. Bir web formunu dolduran ziyaretçi, bir fuarda kartvizit bırakan kişi, bir pazarlama e-postasına tıklayan kullanıcı — bunların hepsi potansiyel olarak bir lead'dir. Bu aşamada elimizde genellikle sınırlı bilgi vardır: bir isim, bir e-posta adresi, belki bir şirket adı. Kişinin gerçekten müşteri olup olmayacağı henüz bilinmemektedir.
+Lead kavramının özü budur: belirsizlik. CRM'de lead kaydı, bu belirsizliği yönetmek ve değerlendirmek için var olur. Satış veya pazarlama ekibi lead'i incelediğinde iki karar verebilir: bu kişi gerçek bir fırsat temsil ediyor ve ilerlemeli, ya da bu kişi hedef kitleyle örtüşmüyor ve elenebilir. Birinci durumda lead "qualify" edilir — yani nitelikli bulunur — ve sistemde dönüşüm gerçekleşir.
+
+== Contact ve Account
+
+Lead nitelikli bulunduğunda CRM'de iki yeni kayıt oluşur: Contact ve Account.
+Contact, gerçek bir kişiyi temsil eder. Adı, soyadı, iletişim bilgileri, unvanı ve o kişiye ait tüm etkileşim geçmişi Contact kaydında yaşar. Ancak B2B — yani işletmeden işletmeye — satış söz konusu olduğunda bir kişi her zaman bir organizasyonun parçasıdır. İşte bu organizasyon Account olarak kaydedilir.
+
+Account, bir şirketi, kurumu veya organizasyonu temsil eder. Bir Account'a birden fazla Contact bağlı olabilir; aynı şirkette farklı departmanlardan farklı kişilerle görüşülüyor olabilir. Bu ilişki, CRM'in veri modelinin en temel parçalarından birini oluşturur. Bir yazılımcı gözüyle bakıldığında Contact ile Account arasında klasik bir many-to-one ilişkisi vardır — birden fazla Contact, tek bir Account'a bağlanır.
+Bu ayrım önemlidir çünkü satış süreci çoğu zaman kişilerle yürütülse de karar ve sözleşme kurumsal düzeyde gerçekleşir. CRM bu iki katmanı ayrı ayrı takip ederek her ikisini de görünür kılar.
+
+== Opportunity
+
+Nitelikli bir lead'den veya mevcut bir Account'tan gerçek bir satış ihtimali doğduğunda bu, CRM'de bir Opportunity olarak kaydedilir. Opportunity, aktif olarak yürütülen bir satış sürecini temsil eder.
+Bir Opportunity kaydında genellikle şu bilgiler bulunur: beklenen gelir, tahmini kapanış tarihi, sürecin hangi aşamasında olduğu ve ilgili Contact ile Account bilgileri. Bu aşama bilgisi — pipeline stage olarak da bilinir — satış sürecinin nerede durduğunu gösterir. İlk görüşme yapıldı mı, teklif gönderildi mi, müzakere aşamasında mı, yoksa karar bekleniyor mu? Her aşama, sürecin ilerleyişini ve olası çıktıyı anlamak için kritik bir veri noktasıdır.
+Opportunity'nin kapanmasıyla birlikte iki sonuç mümkündür: kazanıldı veya kaybedildi. Her iki durumda da kayıt CRM'de saklanır. Kaybedilen fırsatlar da en az kazanılanlar kadar değerli veri taşır — neden kaybedildiği, rakiplerle kıyaslamalar ve süreçteki zayıf noktalar bu kayıtlardan analiz edilebilir.
+
+== Activity
+
+Yukarıda anlatılan tüm kayıtlar — Lead, Contact, Account, Opportunity — birer varlıktır. Activity ise bu varlıklarla gerçekleştirilen etkileşimleri temsil eder. Yapılan telefon görüşmesi, gönderilen e-posta, planlanan toplantı, tamamlanan görev — bunların hepsi Activity kapsamına girer.
+
+Activity kayıtlarının önemi, zaman içinde bir etkileşim geçmişi oluşturmasından kaynaklanır. Bir müşteriyle son altı ayda kaç kez iletişim kuruldu? Hangi konular görüşüldü? Hangi taahhütler verildi? Bu soruların cevapları Activity kayıtlarında yatar. Özellikle büyük hesaplarda veya uzun satış döngülerinde bu geçmiş, süreci devralan yeni bir ekip üyesi için hayati önem taşır.
+
+== Case
+
+Case — bazı platformlarda Ticket olarak da adlandırılır — müşteri hizmetleri süreçlerinin temel kaydıdır. Bir müşteri bir sorun bildirdiğinde, bir şikâyette bulunduğunda veya teknik destek talep ettiğinde CRM'de bir Case oluşturulur.
+
+Case kaydı, sorunun ne olduğunu, kimin bildirdiğini, hangi ekibin üstlendiğini, sürecin hangi aşamasında olduğunu ve ne zaman çözüme kavuşturulduğunu takip eder. Bu yapı, müşteri hizmetleri süreçlerini rastgele bir yazışma zincirinden çıkarıp ölçülebilir ve yönetilebilir bir forma sokar.
+
+Case'lerin satış ve pazarlama kayıtlarıyla aynı platform üzerinde bulunması, CRM'in işbirlikçi boyutunun somut bir yansımasıdır. Bir müşterinin aktif bir destek talebi varken satış ekibinin bunu bilmeden yeni bir teklif götürmesi, müşteri deneyimi açısından ciddi bir kopukluk yaratır. CRM bu bilgiyi herkes için görünür kılar.
+
+== Kayıtlar Arası İlişkiler
+
+Şimdiye kadar anlatılan kavramların her biri ayrı bir kayıt türü olsa da CRM'deki asıl değer bu kayıtların birbirine bağlanmasından doğar. Bir Account'a birden fazla Contact bağlıdır. Bir Opportunity hem bir Account'a hem de bir veya birden fazla Contact'a bağlıdır. Activity'ler herhangi bir kayda — Lead'e, Contact'a, Opportunity'ye veya Case'e — ilişkilendirilebilir.
+Bu ilişkisel yapı, müşteriyle ilgili bütünlüklü bir resim elde etmeyi mümkün kılar. Bir Account kaydını açtığınızda o şirkete ait tüm Contact'ları, geçmiş ve aktif Opportunity'leri, açık Case'leri ve tüm Activity geçmişini tek bir yerden görebilirsiniz. CRM'in "tek kayıt noktası" vaadi, tam olarak bu ilişkisel yapı sayesinde gerçekleşir.

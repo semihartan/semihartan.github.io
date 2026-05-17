@@ -1,0 +1,243 @@
+---
+title: "Unit Testing"
+date: "2026-05-16T13:18:11+03:00"
+draft: false
+weight: 11
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Bir plugin'i her seferinde Dataverse'e yükleyip Dynamics 365 arayüzünden manuel olarak test etmek, geliştirme döngüsünü yavaşlatan bir süreçtir. Özellikle karmaşık iş mantığı içeren plugin'lerde, her kod değişikliğinden sonra test adımlarını tekrarlamak hata yapma olasılığını artırır. Birim testleri, plugin mantığını Dataverse'ten bağımsız olarak, saniyeler içinde ve tekrarlanabilir şekilde sınamayı sağlar. Bu yazıda, plugin'ler için birim testi yazmanın iki temel yaklaşımı —mock'lama ve FakeXrmEasy— ele alınmakta ve her ikisi için de çalışan örnekler sunulmaktadır.
+
+== Plugin Testinin Zorluğu
+
+Bir plugin'in `Execute` metodu, parametre olarak `IServiceProvider` alır. Bu servis sağlayıcıdan `IPluginExecutionContext`, `IOrganizationServiceFactory`, `ITracingService` gibi Dataverse altyapısına ait somut sınıflar talep edilir. Birim testinde bu sınıfların gerçek örnekleri yoktur; çünkü ortada canlı bir Dataverse ortamı bulunmaz.
+
+Bu bağımlılıkları aşmanın iki yolu vardır. İlki, test çerçevesinin sağladığı mock kütüphaneleriyle (örneğin Moq) her bir servis için sahte nesneler üretmektir. İkincisi ise FakeXrmEasy gibi, Dataverse'in çalışma zamanını bellek içinde taklit eden özel test kütüphaneleri kullanmaktır. Her iki yaklaşım da aşağıda incelenmektedir.
+
+== Test Projesi Kurulumu
+
+Plugin çözümüne yeni bir test projesi eklenir. Visual Studio'da çözüme sağ tıklanır ve Add > New Project ile "xUnit Test Project" veya "NUnit Test Project" şablonu seçilir. xUnit, .NET ekosisteminde en yaygın kullanılan test çerçevelerinden biridir ve aşağıdaki örneklerde xUnit kullanılmaktadır.
+
+Test projesine şu NuGet paketleri eklenir:
+
+- `Microsoft.CrmSdk.CoreAssemblies` — Plugin'in bağımlı olduğu SDK tipleri için.
+- `Moq` — Mock'lama yaklaşımı için (isteğe bağlı).
+- `FakeXrmEasy` — Bellek içi Dataverse taklidi için (isteğe bağlı).
+
+Test projesi, plugin projesine referans vermelidir.
+
+== Mock'lama Yaklaşımı
+
+Moq kütüphanesi ile `IServiceProvider`, `IPluginExecutionContext`, `IOrganizationServiceFactory` ve `IOrganizationService` arayüzlerinin sahte örnekleri oluşturulur. Bu yaklaşım, plugin'in hangi servisle nasıl etkileştiği üzerinde tam kontrol sağlar.
+
+Aşağıdaki örnek, bir lead oluşturulduğunda konuyu büyük harfe çeviren plugin'i test eder:
+
+[source,csharp]
+----
+using Moq;
+using Microsoft.Xrm.Sdk;
+using Xunit;
+
+namespace SamplePlugin.Tests
+{
+    public class CreateLeadPluginTests
+    {
+        [Fact]
+        public void Execute_ValidLead_ConvertsSubjectToUpper()
+        {
+            // Arrange
+            var target = new Entity("lead");
+            target["subject"] = "yeni müşteri";
+
+            var context = new Mock<IPluginExecutionContext>();
+            context.Setup(c => c.MessageName).Returns("Create");
+            context.Setup(c => c.Stage).Returns((int)StageEnum.PreOperation);
+            context.Setup(c => c.Depth).Returns(1);
+            context.Setup(c => c.InputParameters)
+                .Returns(new ParameterCollection { { "Target", target } });
+
+            var serviceProvider = new Mock<IServiceProvider>();
+            serviceProvider
+                .Setup(s => s.GetService(typeof(IPluginExecutionContext)))
+                .Returns(context.Object);
+
+            var plugin = new CreateLeadPlugin();
+
+            // Act
+            plugin.Execute(serviceProvider.Object);
+
+            // Assert
+            Assert.Equal("YENİ MÜŞTERİ", target["subject"]);
+        }
+    }
+}
+----
+
+Bu testte, `IPluginExecutionContext` mock'lanarak plugin'in ihtiyaç duyduğu `InputParameters` sağlanır. Test, plugin çalıştıktan sonra `subject` alanının büyük harfe dönüştüğünü doğrular.
+
+Eğer plugin `IOrganizationService` kullanarak veri tabanına erişiyorsa, `IOrganizationServiceFactory` ve `IOrganizationService` de mock'lanır:
+
+[source,csharp]
+----
+var service = new Mock<IOrganizationService>();
+service.Setup(s => s.Retrieve("account", It.IsAny<Guid>(), It.IsAny<ColumnSet>()))
+    .Returns(new Entity("account") { ["name"] = "Test Şirket" });
+
+var factory = new Mock<IOrganizationServiceFactory>();
+factory.Setup(f => f.CreateOrganizationService(null)).Returns(service.Object);
+
+serviceProvider
+    .Setup(s => s.GetService(typeof(IOrganizationServiceFactory)))
+    .Returns(factory.Object);
+----
+
+Mock yaklaşımı, her etkileşimin açıkça tanımlanmasını gerektirir. Bu, testi ayrıntılı kılarken, çok sayıda servis çağrısı yapan plugin'lerde test kodunun uzamasına yol açabilir.
+
+== FakeXrmEasy Yaklaşımı
+
+FakeXrmEasy, Dataverse'in temel servislerini bellek içinde çalışan bir ortamda taklit eder. `XrmFakedContext` sınıfı; plugin'in ihtiyaç duyduğu context, organization service, tracing service ve entity image'leri otomatik olarak sağlar. Geliştirici, gerçek Dataverse'e yakın bir deneyimle test yazabilir.
+
+Aynı plugin için FakeXrmEasy ile yazılmış test şöyledir:
+
+[source,csharp]
+----
+using FakeXrmEasy;
+using Microsoft.Xrm.Sdk;
+using Xunit;
+
+namespace SamplePlugin.Tests
+{
+    public class CreateLeadPluginFakeTests
+    {
+        [Fact]
+        public void Execute_ValidLead_ConvertsSubjectToUpper()
+        {
+            // Arrange
+            var context = new XrmFakedContext();
+            var target = new Entity("lead");
+            target["subject"] = "yeni müşteri";
+
+            var pluginCtx = context.GetDefaultPluginContext();
+            pluginCtx.MessageName = "Create";
+            pluginCtx.Stage = (int)StageEnum.PreOperation;
+            pluginCtx.InputParameters = new ParameterCollection { { "Target", target } };
+
+            // Act
+            context.ExecutePluginWith<CreateLeadPlugin>(pluginCtx);
+
+            // Assert
+            Assert.Equal("YENİ MÜŞTERİ", target["subject"]);
+        }
+    }
+}
+----
+
+`GetDefaultPluginContext()`, geçerli bir `IPluginExecutionContext` örneği döndürür. `ExecutePluginWith<T>()` ise plugin'i oluşturur ve context ile birlikte çalıştırır. Test sonunda, tıpkı mock örneğinde olduğu gibi, `subject` alanının büyük harfe döndüğü doğrulanır.
+
+FakeXrmEasy, organization service çağrılarını da destekler. Aşağıdaki örnek, plugin'in bir hesap kaydını sorguladığı ve sonucu kullandığı daha karmaşık bir senaryoyu test eder:
+
+[source,csharp]
+----
+[Fact]
+public void Execute_LeadWithAccount_UpdatesLeadWithAccountName()
+{
+    // Arrange
+    var context = new XrmFakedContext();
+    var account = new Entity("account", Guid.NewGuid());
+    account["name"] = "Test Şirket";
+
+    context.Initialize(new List<Entity> { account });
+
+    var target = new Entity("lead");
+    target["parentaccountid"] = account.ToEntityReference();
+
+    var pluginCtx = context.GetDefaultPluginContext();
+    pluginCtx.MessageName = "Create";
+    pluginCtx.Stage = (int)StageEnum.PreOperation;
+    pluginCtx.InputParameters = new ParameterCollection { { "Target", target } };
+
+    // Act
+    context.ExecutePluginWith<EnrichLeadPlugin>(pluginCtx);
+
+    // Assert
+    Assert.Equal("Test Şirket", target["companyname"]);
+}
+----
+
+`context.Initialize()` ile test veri tabanına önceden kayıtlar eklenir. Plugin, `IOrganizationService` üzerinden bu kayıtları sorgulayabilir.
+
+== Pre/Post Image Testleri
+
+Entity image'ler, FakeXrmEasy'de `PreEntityImages` ve `PostEntityImages` koleksiyonlarına doğrudan `Entity` nesneleri eklenerek test edilir:
+
+[source,csharp]
+----
+var preImage = new Entity("lead");
+preImage["subject"] = "eski konu";
+preImage["companyname"] = "Eski Şirket";
+
+pluginCtx.PreEntityImages.Add("preImage", preImage);
+----
+
+Plugin içinde `context.PreEntityImages["preImage"]` ile bu image'e erişilebilir. Test, image'deki alanların beklenen değerleri taşıdığını doğrulayabilir.
+
+== Hata Yönetimi Testleri
+
+Plugin'in hata fırlatması gereken durumlar da test edilmelidir. xUnit'te `Assert.Throws<T>()` kullanılır:
+
+[source,csharp]
+----
+[Fact]
+public void Execute_MissingCompanyName_ThrowsException()
+{
+    var context = new XrmFakedContext();
+    var target = new Entity("lead");
+    target["subject"] = "konu var ama şirket yok";
+
+    var pluginCtx = context.GetDefaultPluginContext();
+    pluginCtx.MessageName = "Create";
+    pluginCtx.Stage = (int)StageEnum.PreOperation;
+    pluginCtx.InputParameters = new ParameterCollection { { "Target", target } };
+
+    Assert.Throws<InvalidPluginExecutionException>(() =>
+        context.ExecutePluginWith<ValidateLeadPlugin>(pluginCtx));
+}
+----
+
+Bu test, `ValidateLeadPlugin`'in `companyname` alanı olmadığında `InvalidPluginExecutionException` fırlattığını doğrular.
+
+== Hangi Yaklaşım Seçilmeli?
+
+Her iki yaklaşımın da kendine göre avantajları vardır. Mock'lama, test edilen kodun tam olarak hangi bağımlılıklarla etkileştiğini açıkça belgelemeyi zorunlu kılar. Bu, testin niyetini netleştirir. Ancak çok sayıda servis çağrısı içeren plugin'lerde mock kodu hızla karmaşıklaşabilir.
+
+FakeXrmEasy, gerçek Dataverse davranışına daha yakın bir test ortamı sunar. `RetrieveMultiple`, `Create`, `Update` gibi işlemler, gerçeğe yakın şekilde çalışır. Test verisi `Initialize()` ile kolayca hazırlanır. Plugin Registration Tool'a yüklemeden önce, plugin mantığının büyük kısmı bu ortamda sınanabilir. Ancak FakeXrmEasy, Dataverse'in tüm özelliklerini birebir desteklemez; örneğin FetchXML sorguları sınırlıdır, transaction yönetimi simüle edilmez ve bazı özel mesajlar çalışmayabilir.
+
+Pratikte, iki yaklaşımın bir arada kullanılması yaygındır. Basit iş mantığı testleri FakeXrmEasy ile hızlıca yazılır. Belirli bir servis çağrısının parametrelerini incelemek gerektiğinde ise mock'lama tercih edilir.
+
+== Test Edilebilir Kod Yazma
+
+Birim testi yazmayı kolaylaştırmak için plugin kodunun belirli prensiplere uyması gerekir. `Execute` metodu, mümkün olduğunca kısa tutulmalı ve asıl iş mantığı ayrı sınıflara veya metotlara taşınmalıdır. Bu, iş mantığının plugin altyapısından bağımsız olarak test edilmesini sağlar.
+
+[source,csharp]
+----
+public void Execute(IServiceProvider serviceProvider)
+{
+    var context = GetContext(serviceProvider);
+    var service = GetService(serviceProvider);
+
+    var handler = new LeadHandler(service, context);
+    handler.Handle();
+}
+----
+
+`LeadHandler` sınıfı, `IOrganizationService` ve `IPluginExecutionContext`'i kurucu parametre olarak alır. Bu sınıf, plugin altyapısından bağımsız olarak doğrudan test edilebilir.
+
+== Sonuç
+
+Birim testleri, plugin geliştirme döngüsünü hızlandırmanın ve kod kalitesini artırmanın etkili bir yoludur. Mock'lama ve FakeXrmEasy, farklı ihtiyaçlara cevap veren iki test yaklaşımıdır. Mock'lama, bağımlılıklar üzerinde tam kontrol sağlarken; FakeXrmEasy, Dataverse davranışını bellek içinde taklit ederek daha gerçekçi bir test ortamı sunar. Her ikisi de, plugin'i Dataverse'e yüklemeden önce iş mantığının doğruluğundan emin olmayı sağlar. Bu yazıyla birlikte plugin geliştirme bölümü tamamlanmıştır. Bir sonraki yazıda, Dataverse ile etkileşimin bir diğer yolu olan Web API konusuna giriş yapılacaktır.

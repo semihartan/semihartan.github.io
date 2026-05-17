@@ -1,0 +1,85 @@
+---
+title: "Dış Sistemlerle Veri Senkronizasyonu"
+date: "2026-05-16T13:18:18+03:00"
+draft: false
+weight: 3
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Şimdiye kadar Dataverse ile tek yönlü ve olay tabanlı entegrasyon yöntemlerini inceledik. Değişiklik takibi ile yalnızca değişen kayıtları sorgulamayı, alternatif anahtarlar ve upsert ile ise GUID bağımlılığı olmadan veri yazmayı gördük. Bu yazıda, bu araçları bir araya getirerek iki sistem arasında çift yönlü ve sürekli bir veri senkronizasyonu mimarisinin nasıl kurulacağı ele alınmaktadır. Konu; senkronizasyon stratejilerini, çakışma yönetimini, hata toleransını ve performans yaklaşımlarını kapsar.
+
+== Senkronizasyon Stratejileri
+
+İki sistem arasında veri senkronizasyonu için üç temel strateji vardır. Seçim, veri hacmine, gecikme toleransına ve sistemler arası bağımlılığa göre yapılır.
+
+Tam senkronizasyon, her çalıştırmada tüm verinin baştan aktarılmasıdır. Kaynak sistemdeki tüm kayıtlar okunur ve hedef sistemdeki tüm kayıtlarla karşılaştırılır. Algoritmik olarak basittir; ancak veri hacmi büyüdükçe süresi ve kaynak tüketimi doğrusal olarak artar. Yalnızca referans verilerinin (döviz kurları, birim listeleri gibi) günlük veya haftalık senkronizasyonu için uygundur.
+
+Artımlı senkronizasyon, yalnızca son senkronizasyondan sonra değişen kayıtları taşır. Dataverse tarafında bu, değişiklik takibi ile sağlanır. Dış sistem tarafında ise ya bir değişiklik günlüğü (change log) tablosu ya da kayıtlar üzerinde bir son değişiklik zaman damgası (last modified timestamp) bulunur. Artımlı senkronizasyon, büyük veri hacimlerinde performans avantajı sağlar ve senkronizasyon aralığını dakikalara kadar düşürmeye izin verir.
+
+Gerçek zamanlı senkronizasyon, kaynak sistemde bir değişiklik olduğu anda hedef sisteme bildirim gitmesidir. Dataverse tarafında bu, plugin, webhook veya Service Bus ile sağlanır. Dış sistem tarafında ise bir mesaj kuyruğu veya webhook alıcısı bulunur. Gecikmenin saniyelerle ölçüldüğü, işlemsel bütünlüğün kritik olduğu senaryolarda tercih edilir.
+
+Pratikte bu üç strateji bir arada kullanılır. İlk kurulumda tam senkronizasyon yapılır. Ardından artımlı senkronizasyon belirli aralıklarla çalışır. Kritik değişiklikler için ise gerçek zamanlı bildirimler kullanılır.
+
+== Eşleme Katmanı
+
+İki sistem arasındaki veri modelleri nadiren birebir aynıdır. Alan adları, veri tipleri, referans değerleri ve hatta varlık yapıları farklılık gösterebilir. Senkronizasyon mimarisinde, bu farkları yöneten bir eşleme katmanı bulunur.
+
+Eşleme katmanı şu görevleri üstlenir. Alan adlarını dönüştürmek: örneğin dış sistemdeki `customerName` alanını Dataverse'teki `name` alanına eşlemek. Veri tiplerini dönüştürmek: dış sistemin string olarak tuttuğu tarihi, Dataverse'in beklediği `DateTime` formatına çevirmek. Referans değerlerini çözümlemek: dış sistemdeki `IL` şehir kodunu, Dataverse'teki İstanbul GUID'ine dönüştürmek. Alternatif anahtar eşlemesi yapmak: dış sistemin `customerId` değerini, Dataverse'teki `accountnumber` alternatif anahtarına bağlamak.
+
+Eşleme katmanı, entegrasyon kodunun merkezinde yer alır ve her iki yönde de çalışır. Dataverse'ten dış sisteme giden veri, Dataverse alan adlarından dış sistem alan adlarına; dış sistemden Dataverse'e gelen veri ise tam tersi yönde dönüştürülür. Bu katmanın temiz ve test edilebilir olması, entegrasyonun bakım maliyetini doğrudan etkiler.
+
+== Çakışma Yönetimi
+
+İki sistem arasında çift yönlü senkronizasyonda, aynı kaydın her iki sistemde de neredeyse aynı anda değiştirilmesi durumu oluşabilir. Bu duruma çakışma denir ve senkronizasyon mimarisinin en zorlu problemlerinden biridir.
+
+Çakışma yönetimi için üç ana yaklaşım vardır. Son yazan kazanır (last writer wins), en basit yöntemdir. Hangi değişiklik zaman damgası daha yeniyse o geçerli olur. Uygulaması kolaydır; ancak bir sistemin yaptığı değişikliğin sessizce kaybolmasına yol açabilir.
+
+Kaynak kazanır (source of truth), belirli bir alan kümesi için yalnızca bir sistemin değişikliklerinin geçerli olduğu yöntemdir. Örneğin müşteri adresi yalnızca ERP'de değiştirilebilir, CRM'de değiştirilse bile senkronizasyon sırasında ERP'deki değerle ezilir. Bu yöntem, veri sahipliğini netleştirir; ancak kullanıcıların bir sistemde yaptığı değişikliklerin diğer sisteme yansımadığını görmesine yol açabilir.
+
+Birleştirme (merge), her iki değişikliğin de korunmaya çalışıldığı yöntemdir. Örneğin Dataverse'te müşterinin telefonu, ERP'de ise adresi değişmişse, senkronizasyon sonucunda her iki alan da güncellenir. Aynı alan iki sistemde de değişmişse, önceden tanımlı bir kurala (örneğin son yazan kazanır) başvurulur. Birleştirme, kullanıcı deneyimi açısından en iyisidir; ancak uygulaması en karmaşık olanıdır.
+
+Çakışma yönetimi stratejisi, iş gereksinimlerine göre alan düzeyinde tanımlanabilir. Her alan için ayrı bir kazanma kuralı belirlemek, hassas verilerin (örneğin kredi limiti) yanlışlıkla ezilmesini önler.
+
+== Hata Yönetimi ve Yeniden Deneme
+
+Senkronizasyon sırasında oluşabilecek hatalar iki ana gruba ayrılır. Geçici hatalar; ağ zaman aşımı, servis kullanılamama (503), throttling (429) gibi kısa süreli sorunlardır. Belirli bir stratejiyle yeniden denendiğinde başarılı olma olasılığı yüksektir. Kalıcı hatalar ise veri doğrulama hatası, yetki eksikliği, alternatif anahtar çakışması gibi yeniden denemekle düzelmeyecek sorunlardır. Bunlar manuel müdahale gerektirir.
+
+Yeniden deneme stratejisi, üstel geri çekilme (exponential backoff) ile uygulanır. İlk deneme başarısız olduğunda 1 saniye, ikinci denemede 2 saniye, üçüncüde 4 saniye beklenir. Maksimum deneme sayısına ulaşıldığında, kayıt bir hata kuyruğuna (dead-letter queue) alınır ve manuel inceleme için loglanır.
+
+Dataverse tarafında throttling, `429 Too Many Requests` yanıtıyla bildirilir. Yanıtın `Retry-After` başlığı, kaç saniye sonra tekrar denenmesi gerektiğini belirtir. Entegrasyon kodunun bu başlığa saygı göstermesi ve belirtilen süre dolmadan yeni istek göndermemesi gerekir.
+
+Başarısız kayıtlar için bir hata günlüğü tutulması önemlidir. Hangi kaydın, hangi adımda, hangi hata mesajıyla başarısız olduğu kaydedilmelidir. Bu günlük, hem sorun teşhisi hem de manuel düzeltme için gereklidir.
+
+== Performans
+
+Veri senkronizasyonunda performans, birim zamanda taşınabilen kayıt sayısı ile ölçülür. Performansı artırmak için aşağıdaki yöntemler kullanılır.
+
+Toplu işlem (batching), tek tek göndermek yerine birden çok kaydı tek bir çağrıda birleştirir. Dataverse Web API'de `$batch` uç noktası, Organization Service'te ise `ExecuteMultipleRequest` bu işi görür. Batch boyutu, ağ gecikmesi ile bellek kullanımı arasında bir denge olarak seçilmelidir; 100-500 kayıt arası tipik bir aralıktır.
+
+Paralellik, birbirinden bağımsız batch'leri eş zamanlı olarak göndermeyi sağlar. Ancak Dataverse, aynı kullanıcı başına eş zamanlı istek sayısını sınırlar. Bu sınır tipik olarak 10-15 arasındadır. Daha fazla paralellik, throttling'e yol açar.
+
+Alan seçiciliği, yalnızca ihtiyaç duyulan alanların taşınmasıdır. Sorgulamalarda `$select` ile yalnızca gerekli alanlar istenir. Güncellemelerde yalnızca değişen alanlar gönderilir. Gereksiz alan taşımak, hem ağ trafiğini hem de Dataverse üzerindeki işlem süresini artırır.
+
+Zamanlama, senkronizasyonun yoğun olmayan saatlere kaydırılmasıdır. Dataverse, kullanıcı trafiğinin düşük olduğu saatlerde daha fazla kaynak sunar. Büyük hacimli toplu senkronizasyonlar, gece saatlerine planlanmalıdır.
+
+== Örnek Mimari
+
+Aşağıda, Dataverse ile dış bir ERP sistemi arasında çift yönlü senkronizasyon için tipik bir mimari özetlenmektedir.
+
+Dış sistem tarafında bir değişiklik günlüğü tablosu bulunur. Her kayıt değişikliğinde bu tabloya bir satır eklenir. Bir Azure Function, belirli aralıklarla (örneğin her 5 dakikada bir) bu tabloyu sorgular ve bekleyen değişiklikleri alır. Her değişiklik, eşleme katmanından geçirilerek Dataverse alan formatına dönüştürülür. Alternatif anahtar kullanılarak Dataverse'e upsert yapılır. Başarılı işlemler değişiklik günlüğünden silinir, başarısız olanlar hata kuyruğuna alınır.
+
+Dataverse tarafında ise değişiklik takibi etkindir. Başka bir Azure Function, delta bağlantısını kullanarak Dataverse'teki değişiklikleri sorgular. Her değişiklik, eşleme katmanından geçirilerek ERP alan formatına dönüştürülür ve ERP'nin API'sine gönderilir. Delta bağlantısı bir sonraki çalışma için saklanır.
+
+Gerçek zamanlı kritik değişiklikler için (örneğin sipariş durumu değişikliği), Dataverse'te bir plugin veya webhook tetiklenir. Bu, doğrudan ERP'nin API'sine veya bir Azure Service Bus kuyruğuna bildirim gönderir. Kuyruktaki mesaj, bir Azure Function tarafından alınır ve işlenir.
+
+== Sonuç
+
+Dış sistemlerle veri senkronizasyonu, tek bir araç veya yöntemle çözülecek bir problem değildir. Tam, artımlı ve gerçek zamanlı stratejilerin birlikte kullanıldığı; eşleme katmanıyla veri modeli farklarının yönetildiği; çakışma politikalarıyla veri bütünlüğünün korunduğu; yeniden deneme ve hata günlüğüyle dayanıklılığın sağlandığı çok katmanlı bir mimari gerektirir. Değişiklik takibi, alternatif anahtarlar, upsert, batch işlemleri, webhook ve Service Bus gibi bu seride ele alınan her araç, bu mimarinin bir yapı taşıdır. Doğru yapı taşlarını doğru senaryoda kullanmak, entegrasyonun başarısını belirler.
+
+Bu yazıyla birlikte "Microsoft Dynamics 365 ile CRM" serisinin tüm bölümleri tamamlanmıştır.

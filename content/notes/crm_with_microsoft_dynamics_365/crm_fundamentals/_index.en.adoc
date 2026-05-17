@@ -1,0 +1,10 @@
+---
+title: "Crm_fundamentals"
+date: "2026-05-15T16:48:49+03:00"
+draft: false
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}

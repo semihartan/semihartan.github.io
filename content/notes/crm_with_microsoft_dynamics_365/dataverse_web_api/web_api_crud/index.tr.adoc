@@ -1,0 +1,187 @@
+---
+title: "CRUD İşlemleri"
+date: "2026-05-16T13:18:13+03:00"
+draft: false
+weight: 2
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Bir önceki yazıda, Dataverse Web API'nin REST ve OData temelleri üzerine kurulu olduğunu ve kaynaklara HTTP fiilleriyle erişildiğini gördük. Bu yazıda, Web API üzerinden yapılan dört temel işlem —oluşturma, okuma, güncelleme ve silme— ayrıntılı olarak ele alınmaktadır. Her işlem için HTTP istek ve yanıt örnekleri, sık kullanılan OData sorgu seçenekleri ve dikkat edilmesi gereken noktalar sunulacaktır.
+
+== Kayıt Oluşturma (Create)
+
+Yeni bir kayıt oluşturmak için hedef tablonun koleksiyon URL'sine POST isteği gönderilir. İstek gövdesi, oluşturulacak kaydın alanlarını JSON formatında taşır. En azından zorunlu alanların doldurulması gerekir.
+
+Aşağıdaki örnek, yeni bir hesap (account) kaydı oluşturur:
+
+[source,http]
+----
+POST /api/data/v9.2/accounts HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Content-Type: application/json
+Accept: application/json
+
+{
+    "name": "Contoso Ltd.",
+    "address1_city": "İstanbul",
+    "telephone1": "+90 212 555 1234"
+}
+----
+
+Sunucu, işlem başarılı olduğunda `204 No Content` durum kodu döner. Oluşturulan kaydın GUID'i, yanıtın `OData-EntityId` başlığında yer alır:
+OData-EntityId: https://myorg.api.crm.dynamics.com/api/data/v9.2/accounts(00000000-0000-0000-0000-000000000001)
+
+text
+
+Bazı senaryolarda, oluşturulan kaydın tamamını tek bir çağrıda geri almak istenebilir. Bunun için `Prefer: return=representation` başlığı kullanılır:
+
+[source,http]
+----
+POST /api/data/v9.2/accounts HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Content-Type: application/json
+Prefer: return=representation
+
+{
+    "name": "Contoso Ltd.",
+    "address1_city": "İstanbul"
+}
+----
+
+Bu durumda sunucu `201 Created` döner ve yanıt gövdesinde oluşturulan kaydın tüm alanları yer alır.
+
+== Kayıt Sorgulama (Read)
+
+Tek bir kaydı okumak için, kaydın GUID'i ile birlikte tablo koleksiyonunun tekil öğe URL'sine GET isteği gönderilir:
+
+[source,http]
+----
+GET /api/data/v9.2/accounts(00000000-0000-0000-0000-000000000001) HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Accept: application/json
+----
+
+Yanıt, kaydın tüm alanlarını içerir. Yalnızca belirli alanları getirmek için `$select` sorgu seçeneği eklenir:
+
+[source,http]
+----
+GET /api/data/v9.2/accounts(00000000-0000-0000-0000-000000000001)?$select=name,address1_city,telephone1 HTTP/1.1
+----
+
+Birden çok kaydı sorgulamak için koleksiyon URL'sine GET isteği yapılır. Sonuç kümesi, `value` dizisi içinde döner. Sorgu seçenekleriyle sonuçlar filtrelenebilir, sıralanabilir ve sayfalanabilir.
+
+`$filter` seçeneği, kayıtları belirli ölçütlere göre filtreler. Aşağıdaki örnek, adı "Contoso" ile başlayan ve şehri İstanbul olan hesapları getirir:
+
+[source,http]
+----
+GET /api/data/v9.2/accounts?$select=name,address1_city
+    &$filter=startswith(name,'Contoso') and address1_city eq 'İstanbul' HTTP/1.1
+----
+
+`$orderby` seçeneği sıralama yapar. Varsayılan sıralama artandır; azalan sıralama için alan adının sonuna ` desc` eklenir:
+
+[source,http]
+----
+GET /api/data/v9.2/accounts?$select=name,createdon
+    &$orderby=createdon desc HTTP/1.1
+----
+
+`$top` ve `$skip` seçenekleri sayfalama içindir. Aşağıdaki örnek, ilk 10 kaydı atlayıp sonraki 5 kaydı getirir:
+
+[source,http]
+----
+GET /api/data/v9.2/accounts?$select=name&$top=5&$skip=10 HTTP/1.1
+----
+
+`$expand` seçeneği, ilişkili kayıtları ana kayıtla birlikte getirir. Tek bir çağrıda bir hesabı ve o hesaba bağlı irtibatları (contacts) almak için:
+
+[source,http]
+----
+GET /api/data/v9.2/accounts(00000000-0000-0000-0000-000000000001)
+    ?$select=name
+    &$expand=contact_customer_accounts($select=fullname,emailaddress1) HTTP/1.1
+----
+
+`$count` seçeneği, sonuç kümesindeki toplam kayıt sayısını `@odata.count` özelliğinde döndürür:
+
+[source,http]
+----
+GET /api/data/v9.2/accounts?$count=true HTTP/1.1
+----
+
+Yanıtta `@odata.count` alanı, filtrelere uyan toplam kayıt sayısını gösterir.
+
+== Kayıt Güncelleme (Update)
+
+Bir kaydı güncellemek için kaydın URL'sine PATCH isteği gönderilir. İstek gövdesinde yalnızca değiştirilmek istenen alanlar yer alır. Gönderilmeyen alanlar değişmez. Bir alanı `null` yapmak, o alanın değerini temizler.
+
+[source,http]
+----
+PATCH /api/data/v9.2/accounts(00000000-0000-0000-0000-000000000001) HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+    "name": "Contoso Holding A.Ş.",
+    "address1_city": "Ankara"
+}
+----
+
+Başarılı bir güncelleme `204 No Content` döner. İyimser eşzamanlılık (optimistic concurrency) kontrolü için `If-Match` başlığı kullanılabilir. Bu başlık, kaydın mevcut `@odata.etag` değeriyle gönderilir. Kayıt son okunduğundan bu yana değişmişse `412 Precondition Failed` hatası döner:
+
+[source,http]
+----
+PATCH /api/data/v9.2/accounts(00000000-0000-0000-0000-000000000001) HTTP/1.1
+If-Match: W/"123456"
+----
+
+== Kayıt Silme (Delete)
+
+Bir kaydı silmek için kaydın URL'sine DELETE isteği gönderilir:
+
+[source,http]
+----
+DELETE /api/data/v9.2/accounts(00000000-0000-0000-0000-000000000001) HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+----
+
+Başarılı bir silme `204 No Content` döner. Kayıt mevcut değilse `404 Not Found` hatası alınır.
+
+Silme işlemi, Dataverse'in ilişkisel davranış kurallarına (cascade delete, restrict delete vs.) tabidir. Bir kayda bağlı başka kayıtlar varsa ve ilişki kuralı silmeye izin vermiyorsa, işlem hata ile sonuçlanır.
+
+== Upsert
+
+Upsert, bir kaydın var olup olmadığını bilmeden, varsa güncelleme, yoksa oluşturma işlemi yapmaya yarar. Web API'de upsert, PATCH fiili ve `If-Match: *` veya `If-None-Match: *` başlıklarıyla gerçekleştirilir.
+
+Alternatif anahtar (alternate key) kullanarak upsert yapmak, dış sistem entegrasyonlarında yaygındır. Aşağıdaki örnek, `accountnumber` alanı alternatif anahtar olarak tanımlanmış bir hesabı, bu anahtarla arar ve bulursa günceller, bulamazsa oluşturur:
+
+[source,http]
+----
+PATCH /api/data/v9.2/accounts(accountnumber='CONTOSO-001') HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Content-Type: application/json
+If-None-Match: *
+
+{
+    "name": "Contoso Ltd.",
+    "address1_city": "İzmir"
+}
+----
+
+`If-None-Match: *` başlığı, eşleşen kayıt yoksa oluştur anlamına gelir. `If-Match: *` ise eşleşen kayıt varsa güncelle anlamına gelir.
+
+== Sonuç
+
+Dataverse Web API üzerinden CRUD işlemleri, standart HTTP fiilleri ve OData sorgu seçenekleriyle gerçekleştirilir. POST ile kayıt oluşturulur, GET ile sorgulanır, PATCH ile güncellenir ve DELETE ile silinir. `$select`, `$filter`, `$orderby`, `$top`, `$skip` ve `$expand` gibi OData seçenekleri, istemciye tam olarak ihtiyaç duyduğu veriyi şekillendirme gücü verir. Alternatif anahtarlarla yapılan upsert işlemleri ise dış sistem entegrasyonlarında veri bütünlüğünü sağlar. Bir sonraki yazıda, Web API üzerinden toplu (batch) işlemler ele alınacaktır.

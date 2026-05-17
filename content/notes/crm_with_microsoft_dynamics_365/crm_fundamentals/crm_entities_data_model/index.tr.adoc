@@ -1,0 +1,82 @@
+---
+title: "CRM'in Temel Varlıkları ve Veri Modeli"
+date: "2026-05-13T23:58:05+03:00"
+draft: false
+weight: 4
+---
+
+:stem:
+:sectnums:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+
+== Giriş
+
+CRM'in ne olduğunu ve neden var olduğunu önceki yazılarda ele aldık. Strateji, süreç ve teknoloji sacayağı üzerinde yükselen bu yapının, gündelik hayatta nasıl işlediğini anlamak için şimdi bir katman daha aşağıya inmemiz gerekiyor: veri katmanına. Her CRM sisteminin kalbinde, müşteri dünyasını temsil eden bir veri modeli yatar. Bu model, işletmenin kiminle konuştuğunu, ne sattığını, hangi sorunları çözdüğünü ve tüm bunların birbiriyle nasıl bağlantılı olduğunu tanımlar. Platformlar değişse de bu modelin ana hatları şaşırtıcı derecede evrenseldir.
+
+Bu yazıda, bir CRM sisteminde karşınıza çıkacak temel varlıkları (entity) ve bunlar arasındaki ilişkileri, herhangi bir yazılımdan bağımsız olarak tanıyacağız. Amaç, ileride ister Dynamics 365 ister başka bir platformun başına oturduğunuzda, ekranda gördüğünüz formların ve listelerin arkasındaki mantığı hemen kavrayabilmenizdir.
+
+== Veri Modeli
+
+CRM bağlamında veri modeli, işletmenin müşteriyle ilgili olarak takip ettiği her şeyin —kimler, hangi kurumlar, ne tür etkileşimler, hangi süreçler— birbirine bağlı tablolar ve bu tablolar arasındaki kurallar bütünü olarak tanımlanmasıdır. Bir muhasebe programının cari hesap ve fatura tabloları varsa, CRM'in de müşteri, aday, fırsat ve vaka tabloları vardır. Ancak CRM'i farklı kılan, bu tabloların yalnızca veri saklamakla kalmayıp, müşteriyle kurulan ilişkinin tüm aşamalarını birbirine bağlamasıdır.
+
+Veri modeli doğru kurgulanmadığında, CRM yüzeyde çalışıyor gibi görünse de sorulara cevap veremez hale gelir. "Bu müşteriye en son hangi teklifi verdik?" sorusunun cevabı, fırsat kaydının müşteri kaydına doğru şekilde bağlanmış olmasına bağlıdır. "Açık destek talebi olan müşterilere pazarlama e-postası gönderme" kuralı, vaka ve müşteri tabloları arasındaki ilişkinin varlığı sayesinde mümkündür. Kısacası veri modeli, CRM'in omurgasıdır.
+
+== Temel Varlıklar
+
+Her CRM platformu farklı isimlendirmeler kullanabilir; ancak kavramlar ortaktır. Aşağıda, bir CRM'de neredeyse her zaman bulacağınız temel varlıkları ve bunların iş dünyasındaki karşılıklarını ele alalım.
+
+=== Müşteri (Account / Company)
+
+Müşteri varlığı, iş yaptığınız kurumu ya da bireysel müşteriyi temsil eder. B2B (işletmeden işletmeye) bir bağlamda bu, bir şirket kaydıdır: firma adı, vergi numarası, adresi, sektörü, çalışan sayısı gibi bilgiler burada tutulur. B2C (işletmeden tüketiciye) tarafında ise doğrudan son kullanıcıyı ifade eder. Bir CRM'de müşteri kaydı, diğer tüm kayıtların etrafında döndüğü merkezdir; çünkü fırsatlar, vakalar, aktiviteler hep bir müşteriye bağlanır. Müşteri kaydı olmadan, satış sürecini veya hizmet geçmişini anlamlı şekilde yönetemezsiniz.
+
+=== İrtibat (Contact)
+
+Bir müşteri şirketle çalışırken, o şirketin içinde muhatap olduğunuz kişiler vardır. İşte bu kişiler irtibat varlığında saklanır. Bir müşteri kaydının altında birden fazla irtibat bulunabilir: satın alma müdürü, teknik sorumlu, genel müdür gibi. Her irtibatın adı, soyadı, e-posta adresi, telefon numarası, unvanı ve karar verme yetkisi gibi bilgileri burada tutulur. İrtibat, satış görüşmelerinin, e-posta yazışmalarının ve destek görüşmelerinin gerçek muhatabı olduğu için CRM'deki en aktif varlıklardan biridir. Müşteri (kurum) ile irtibat (kişi) arasındaki bu ayrım, B2B CRM'in temel yapı taşlarından biridir.
+
+=== Aday (Lead)
+
+Aday, henüz müşteri olup olmayacağı belli olmayan, ancak ilgi göstermiş potansiyel kişi veya kurumdur. Bir web sitesi formu dolduran, bir fuarda kartvizitini bırakan veya bir e-posta kampanyasındaki bağlantıya tıklayan herkes önce bir aday olarak sisteme girer. Aday kaydı, müşteri ve irtibat kayıtlarından ayrı tutulur; çünkü bunlar henüz nitelendirilmemiş, doğrulanmamış bilgilerdir. Satış ekibi adayı değerlendirir, ihtiyacı anlar ve gerçekten potansiyel taşıdığına kanaat getirirse, aday kaydı bir müşteri ve irtibat kaydına dönüştürülür. Bu dönüşüm, CRM'deki en kritik aşamalardan biridir; çünkü pazarlamanın getirdiği adayın satışa devredildiği noktadır.
+
+=== Fırsat (Opportunity)
+
+Fırsat, bir müşteriye satış yapma potansiyelini temsil eder. Müşteri kaydının altında yer alır ve "Bu müşteriye ne satmaya çalışıyoruz?" sorusunun cevabını verir. Bir fırsatın tahmini kapanış tarihi, olası satış tutarı, içinde bulunduğu aşama (örneğin keşif, teklif, görüşme, kapalı-kazanıldı) ve bu fırsatla ilgili iletişim geçmişi bu kayıt üzerinde izlenir. Fırsat, satış hunisinin bel kemiğidir. Bir müşteriyle aynı anda birden fazla fırsat üzerinde çalışılıyor olabilir; her biri ayrı bir satış sürecini temsil eder. Fırsat kaydı kapatıldığında, kazanıldı ya da kaybedildi olarak işaretlenir ve satış performansı bu veriler üzerinden ölçülür.
+
+=== Vaka (Case / Ticket)
+
+Vaka, müşterinin bir sorununu, sorusunu veya talebini kayda geçiren varlıktır. Müşteri hizmetleri ekibinin günlük mesaisi büyük ölçüde vaka kayıtları etrafında döner. Bir vaka açıldığında, ona bir numara atanır, bir öncelik ve statü (yeni, üzerinde çalışılıyor, müşteriden bilgi bekleniyor, çözüldü) tanımlanır. Vaka, mutlaka bir müşteriye ve isteğe bağlı olarak bir irtibata bağlanır. Böylece hem müşteri hizmetleri temsilcisi hem de satış ekibi, bir müşterinin açık sorunları olup olmadığını aynı yerden görebilir. Vaka kaydının altında, müşteriyle yapılan her yazışma ve atılan her not kronolojik olarak birikir; bu da sorun çözüldükten sonra bile kurumsal hafıza olarak kalır.
+
+=== Aktivite (Activity)
+
+Aktivite, müşteriyle ilgili yapılan her türlü etkileşimi kaydeden varlıktır. Bir telefon görüşmesi, bir e-posta, bir toplantı, bir not, hatta bir görev... Bunların hepsi aktivite olarak CRM'de yer alır. Aktivite, kendi başına bağımsız bir kayıt değildir; her zaman bir müşteriye, bir irtibata, bir fırsata veya bir vakaya bağlanır. Örneğin bir satış temsilcisi, fırsatla ilgili olarak müşteriyi aradığında bu arama, hem o fırsatın hem de o müşterinin aktivite geçmişine işlenir. Aktivite kayıtları sayesinde "Bu müşteriyle en son ne zaman ve ne hakkında konuştuk?" sorusu her zaman yanıtlanabilir. Zaman içinde biriken aktiviteler, müşteriyle kurulan ilişkinin günlüğünü oluşturur.
+
+=== Kampanya (Campaign)
+
+Kampanya, pazarlama departmanının planladığı ve yürüttüğü toplu iletişim faaliyetlerini temsil eder. Bir e-posta gönderimi, bir fuar katılımı, bir sosyal medya reklamı, bir web semineri... Bunların her biri CRM'de bir kampanya kaydı olarak tutulabilir. Kampanya, adaylarla ve müşterilerle ilişkilendirilir; böylece hangi müşterinin hangi kampanyadan etkilenerek geldiği izlenebilir. Kampanya ile fırsat arasında kurulan bağlantı, pazarlama yatırımının geri dönüşünü (ROI) hesaplamanın anahtarıdır. Bu bağlantı olmadan, pazarlama "harcadık ama ne oldu bilmiyoruz" karanlığında kalır.
+
+== Varlıklar Arası İlişkiler
+
+Bu varlıklar tek başlarına anlamlı veri parçalarıdır, ancak CRM'in gücü aralarındaki bağlantılardan gelir. İlişkileri anlamak, CRM veri modelini kavramanın belki de en önemli adımıdır.
+
+En temel ilişki türü bire-çok (1:N) ilişkidir. Bir müşteri kaydının altında birden fazla irtibat, birden fazla fırsat, birden fazla vaka ve sayısız aktivite bulunabilir. Müşteriye bağlı bu kayıtların her biri, bağlı olduğu müşteri kaydına bir referans taşır. Bu sayede, bir müşteri kaydını açtığınızda tüm irtibatları, tüm açık fırsatları, tüm vakaları ve son aktiviteleri tek bir ekranda görmek mümkün olur. İşte "360 derece müşteri görünümü" denen kavram tam olarak bu ilişkiler ağının bir sonucudur.
+
+Bunun yanında çoka-çok (N:N) ilişkiler de vardır. Örneğin bir kampanya, birden fazla adaya gönderilir; bir aday da birden fazla kampanyadan etkilenmiş olabilir. Bu durumda arada bir bağlantı tablosu kurulur ve her iki yönden de takip edilebilir.
+
+Varlıklar arasındaki bu referanslar, CRM'de raporlamayı anlamlı kılar. "Son 3 ayda açılan ve halen çözülmemiş vakaları olan müşterilerin listesi" gibi bir sorgu, müşteri ve vaka tabloları arasındaki ilişki sayesinde mümkündür. "Belirli bir kampanyadan gelen adayların hangi oranda fırsata dönüştüğü" sorusu, kampanya, aday ve fırsat ilişkileriyle yanıtlanır. İlişki yapısı zayıf kurgulanmış bir CRM'de bu sorular ya cevapsız kalır ya da manuel olarak Excel'de çırpıştırılır.
+
+== Veri Modelinin Esnekliği: Hazır ve Özel Varlıklar
+
+Hiçbir işletme birbirinin aynısı değildir. Bu yüzden CRM platformları, yukarıda saydığımız hazır varlıkların yanında, işletmenin kendi özel varlıklarını da tanımlamasına izin verir. Bir emlak şirketi "Mülk" adında bir varlık oluşturabilir ve bunu müşteri ve fırsatla ilişkilendirebilir. Bir sağlık kuruluşu "Hasta Randevusu" varlığını yaratır, irtibata bağlar. Bu özel varlıklar, CRM'i sektörden sektöre farklılaştıran şeydir.
+
+Ancak iyi bir veri modeli, özel varlıklarla aşırıya kaçmaz. Her yeni varlık, beraberinde yeni ilişkiler, yeni formlar, yeni raporlar getirir. Sadeliği korumak, modeli ihtiyaç kadar büyütmek, deneyimli CRM danışmanlarının ayırt edici özelliğidir.
+
+== Veri Modelinden Kullanıcı Arayüzüne
+
+Son olarak, bu veri modelinin kullanıcıya nasıl yansıdığına kısaca değinmek faydalı olur. CRM'de her varlık genellikle üç şekilde karşınıza çıkar: bir liste görünümü (tüm kayıtları tablo halinde gösterir), bir detay formu (tek bir kaydın tüm alanlarını ve bağlı kayıtlarını gösterir) ve bir hızlı oluşturma paneli (yeni bir kaydı hızlıca girmek için kullanılır). İster satış temsilcisi ister sistem yöneticisi olun, CRM ekranlarında gördüğünüz her şey, aslında alttaki veri modelinin bir yansımasıdır. O yüzden modeli anlamak, platformu anlamanın anahtarıdır.
+
+== Sonuç
+
+CRM'in veri modeli, müşteri dünyasının dijital bir temsilidir. Müşteri, irtibat, aday, fırsat, vaka ve aktivite gibi temel varlıklar, işletmenin müşteriyle olan tüm hikayesini kayda geçirir. Bu varlıklar arasındaki ilişkiler, bir kaydı diğerine bağlayarak dağınık veri parçalarını anlamlı bir bütüne dönüştürür. Hangi CRM platformunu kullanırsanız kullanın, bu temel yapı karşınıza çıkacaktır. Artık bu yapıyı tanıdığınıza göre, bir sonraki adımda bu varlıkları yöneten süreçlere —satış, pazarlama ve hizmet süreçlerine— daha yakından bakabiliriz.
+

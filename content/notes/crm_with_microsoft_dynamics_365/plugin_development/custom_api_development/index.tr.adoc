@@ -1,0 +1,162 @@
+---
+title: "Custom API Geliştirme"
+date: "2026-05-16T13:18:11+03:00"
+draft: false
+weight: 8
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Dataverse, Create, Update, Delete, Retrieve ve RetrieveMultiple gibi standart mesajların yanı sıra, geliştiricilerin kendi özel mesajlarını tanımlamasına da izin verir. Bu özel mesajlara Custom API denir. Bir Custom API, belirli bir iş mantığını kapsayan, parametre alabilen ve yanıt dönebilen, standart Dataverse mesajları gibi davranan bir uç noktadır. Plugin ile desteklendiğinde, dış sistemlerden veya Power Automate'ten tek bir çağrıyla karmaşık işlemleri tetiklemek mümkün olur. Bu yazıda, Custom API'nin yapısı, parametre tanımlama, plugin ile bağlama ve API'yi çağırma adımları ele alınmaktadır.
+
+== Custom API Nedir?
+
+Custom API, Dataverse'te `customapi` tablosunda bir kayıt olarak tanımlanan özel bir mesajdır. Standart bir Dataverse mesajı gibi bir adı (Unique Name), parametreleri ve bağlı olduğu bir plugin'i vardır. API çağrıldığında, bağlı plugin tetiklenir ve iş mantığı çalışır.
+
+Custom API'ler, aşağıdaki senaryolarda standart mesajlara göre avantaj sağlar:
+
+- Birden fazla adımı tek bir atomik işlemde toplamak.
+- Dış sistemlere anlamlı ve iş odaklı bir arayüz sunmak.
+- Power Automate'te özel bir bağlayıcı geliştirmeden, Dataverse bağlayıcısı üzerinden özel işlem çağırmak.
+- Standart mesajların karşılamadığı, yan etkileri olan karmaşık iş mantığını kapsüllemek.
+
+Bir Custom API çağrısı, standart bir Dataverse mesajı gibi Organization Service üzerinden, Web API üzerinden veya Power Automate'in "Perform an unbound action" adımıyla yapılabilir.
+
+== Custom API Kaydı Oluşturma
+
+Bir Custom API, Maker Portal'dan veya doğrudan Dataverse tablolarına kayıt eklenerek oluşturulabilir. Maker Portal'da, Çözümler bölümünde bir çözümün içine girilip "Yeni > Daha Fazla > Custom API" yolu izlenir. Açılan formda şu alanlar doldurulur:
+
+- **Unique Name (Benzersiz Ad):** API'nin sistemdeki benzersiz tanımlayıcısıdır. Yayımcı ön ekiyle başlar, örneğin `crmserisi_HesaplaIndirim`.
+- **Name (Görünen Ad):** Kullanıcı arayüzünde ve log'larda görünen addır.
+- **Display Name:** Yerelleştirilebilir görünen addır.
+- **Description:** API'nin ne yaptığını açıklayan metindir.
+- **Binding Type:** API'nin bağlama türüdür. `Global` (herhangi bir kayda bağlı değil), `Entity` (belirli bir tabloya bağlı) veya `EntityCollection` (tablo koleksiyonuna bağlı) olabilir. Çoğu iş mantığı senaryosunda `Global` yeterlidir.
+- **Bound Entity Logical Name:** Binding Type Entity ise, bağlı olunan tablonun mantıksal adıdır.
+- **Allowed Custom Processing Steps:** API'nin başka plugin adımlarına izin verip vermediğini belirler. `None` seçilirse yalnızca ana plugin çalışır. `Sync and Async` seçilirse, API mesajı üzerine başka plugin'ler de kaydedilebilir.
+- **Execute Privilege Name:** API'yi çağırmak için gereken ayrıcalığın adıdır. Boş bırakılırsa herkes çağırabilir.
+
+Form kaydedildiğinde, Dataverse'te bir `customapi` kaydı oluşur. Bu kayıt, API'nin iskeletidir; henüz bir iş mantığı içermez.
+
+== Parametre Tanımlama
+
+Bir Custom API, isteğe bağlı olarak giriş (input) ve çıkış (output) parametreleri alabilir. Her parametre, `customapirequestparameter` veya `customapiresponseproperty` tablosunda bir kayıttır.
+
+Giriş parametresi tanımlamak için, Custom API kaydının altındaki "Custom API Request Parameters" alt listesine yeni bir kayıt eklenir:
+
+- **Unique Name:** Parametrenin benzersiz adı. Plugin kodunda bu adla erişilir. Örneğin `IndirimOrani`.
+- **Name:** Görünen adı.
+- **Type:** Parametrenin veri tipi. `String`, `Integer`, `Decimal`, `Boolean`, `DateTime`, `EntityReference`, `Guid`, `StringArray` gibi tipler desteklenir.
+- **Is Optional:** Parametrenin zorunlu olup olmadığı.
+- **Description:** Parametrenin açıklaması.
+
+Çıkış parametresi (response property) tanımlamak için benzer şekilde "Custom API Response Properties" alt listesine kayıt eklenir. Plugin, bu parametreye bir değer yazar ve çağrıyı yapan taraf bu değeri okuyabilir.
+
+== Plugin ile Bağlama
+
+Custom API'nin iş mantığını yürütecek plugin, standart bir plugin ile aynı şekilde yazılır. Farkı, Plugin Registration Tool'da step kaydederken mesaj olarak Custom API'nin adının seçilmesidir.
+
+Aşağıdaki örnek, iki sayıyı toplayıp sonucu dönen bir Custom API plugin'idir:
+
+[source,csharp]
+----
+using System;
+using Microsoft.Xrm.Sdk;
+
+namespace SamplePlugin
+{
+    public class HesaplaIndirimPlugin : IPlugin
+    {
+        public void Execute(IServiceProvider serviceProvider)
+        {
+            IPluginExecutionContext context =
+                (IPluginExecutionContext)serviceProvider.GetService(
+                    typeof(IPluginExecutionContext));
+
+            // Giriş parametrelerini oku
+            decimal indirimOrani = (decimal)context.InputParameters["IndirimOrani"];
+            decimal tutar = (decimal)context.InputParameters["Tutar"];
+
+            // İş mantığı
+            decimal indirimTutari = tutar * (indirimOrani / 100);
+            decimal netTutar = tutar - indirimTutari;
+
+            // Çıkış parametrelerini yaz
+            context.OutputParameters["IndirimTutari"] = indirimTutari;
+            context.OutputParameters["NetTutar"] = netTutar;
+        }
+    }
+}
+----
+
+Bu plugin yazılıp derlendikten sonra, Plugin Registration Tool ile Dataverse'e kaydedilir. Step oluşturulurken şu değerler seçilir:
+
+- **Message:** Custom API'nin benzersiz adı (örneğin `crmserisi_HesaplaIndirim`).
+- **Primary Entity:** `none` (Global Custom API'ler için).
+- **Event Pipeline Stage of Execution:** `Post-Operation` (Custom API'lerde önerilen aşama budur; Pre-Operation da kullanılabilir ancak Post-Operation daha tipiktir).
+- **Execution Mode:** `Synchronous`.
+
+Custom API'ler için Pre-Validation ve Pre-Operation aşamaları da kullanılabilir. Pre-Operation'ta plugin, işlem veri tabanına yazılmadan önce çalışır ve işlemi iptal edebilir. Post-Operation'ta ise işlem çoktan tamamlanmıştır; çıkış parametreleri yazılabilir.
+
+Custom API mesajına plugin kaydedildikten sonra, API kullanıma hazırdır.
+
+== Custom API'yi Çağırma
+
+Custom API, çeşitli yollarla çağrılabilir. En yaygın yöntemler şunlardır:
+
+=== Organization Service ile Çağırma (C#)
+
+[source,csharp]
+----
+OrganizationRequest request = new OrganizationRequest("crmserisi_HesaplaIndirim");
+request["IndirimOrani"] = 15m;
+request["Tutar"] = 1000m;
+
+OrganizationResponse response = service.Execute(request);
+
+decimal indirimTutari = (decimal)response["IndirimTutari"];
+decimal netTutar = (decimal)response["NetTutar"];
+----
+
+=== Web API ile Çağırma
+
+[source,http]
+----
+POST /api/data/v9.2/crmserisi_HesaplaIndirim HTTP/1.1
+Content-Type: application/json
+
+{
+    "IndirimOrani": 15,
+    "Tutar": 1000
+}
+----
+
+Yanıt:
+
+[source,json]
+----
+{
+    "IndirimTutari": 150,
+    "NetTutar": 850
+}
+----
+
+=== Power Automate ile Çağırma
+
+Power Automate'te, Dataverse bağlayıcısı altındaki "Perform an unbound action" eylemi kullanılır. Eylem adı olarak Custom API'nin görünen adı seçilir. Giriş parametreleri dinamik içerikle doldurulur; çıkış parametreleri sonraki adımlarda kullanılabilir.
+
+== Sınırlar
+
+Custom API, plugin yazılabilecek her türlü senaryoyu destekler; ancak bazı sınırları vardır:
+
+- Custom API, doğrudan bir tabloya bağlı olmadığı sürece, çağrıldığında bir transaction başlatmaz. Plugin'in veri tabanı işlemlerini kendi içinde yönetmesi gerekir.
+- Pre-image ve Post-image, yalnızca Entity veya EntityCollection bağlama türündeki Custom API'lerde kullanılabilir.
+- Custom API çağrısı, standart bir Dataverse mesajı gibi audit log'lara işlenmez. İzlenebilirlik gerekiyorsa, plugin içinde manuel loglama yapılmalıdır.
+
+== Sonuç
+
+Custom API, Dataverse'te kendi özel mesajlarınızı tanımlamanıza ve bunları plugin ile destekleyerek karmaşık iş mantığını tek bir çağrıya kapsüllemenize olanak tanır. Giriş ve çıkış parametreleriyle zenginleştirilebilen bu yapı, dış sistemler, Power Automate akışları ve diğer plugin'ler için temiz bir arayüz sağlar. Standart mesajların yetersiz kaldığı her noktada, Custom API güçlü bir alternatiftir. Bir sonraki yazıda, plugin'lerin performans optimizasyonu konusu ele alınacaktır.

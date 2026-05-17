@@ -1,0 +1,151 @@
+---
+title: "Plugin Performans Optimizasyonu"
+date: "2026-05-16T13:18:11+03:00"
+draft: false
+weight: 10
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Bir plugin, execution pipeline içinde çalışırken yalnızca kendi iş mantığını değil, tüm işlemin tamamlanma süresini de etkiler. Özellikle synchronous plugin'ler, kullanıcının beklediği süreyi doğrudan uzatır. İki saniyelik bir plugin gecikmesi, günde binlerce işlem yapan bir sistemde saatlerce birikmiş bekleme süresine dönüşebilir. Bu yazıda, plugin'lerin performansını etkileyen başlıca faktörler ve sık yapılan hatalardan kaçınma yöntemleri ele alınmaktadır.
+
+== Gereksiz Veri Getirmekten Kaçınma
+
+Organization Service ile yapılan her çağrı, Dataverse'e gidiş-geliş anlamına gelir. Bu çağrıların sayısını ve taşıdıkları veri miktarını azaltmak, performans iyileştirmenin ilk adımıdır.
+
+`RetrieveMultiple` çağrılarında `ColumnSet`, yalnızca ihtiyaç duyulan alanlarla sınırlı tutulmalıdır. `new ColumnSet(true)` kullanarak tüm alanları getirmek, kayıt başına gereksiz veri taşınmasına yol açar. Plugin'in iş mantığı hangi alanlara ihtiyaç duyuyorsa, yalnızca onlar belirtilmelidir.
+
+[source,csharp]
+----
+// Yanlış: tüm alanları getirir
+Entity account = service.Retrieve("account", accountId, new ColumnSet(true));
+
+// Doğru: yalnızca gerekli alanları getirir
+Entity account = service.Retrieve("account", accountId, 
+    new ColumnSet("name", "address1_city", "revenue"));
+----
+
+Benzer şekilde, bir kaydı yalnızca var olup olmadığını kontrol etmek için getiriyorsanız, hiç alan getirmemeniz yeterlidir. `Retrieve` çağrısında boş bir `ColumnSet` kullanmak, yalnızca kaydın varlığını sorgular ve veri taşımaz:
+
+[source,csharp]
+----
+Entity exists = service.Retrieve("lead", leadId, new ColumnSet(false));
+// exists null değilse kayıt vardır, ancak hiçbir alan değeri taşımaz
+----
+
+== Image'leri Verimli Kullanma
+
+Entity image'ler, her plugin çalışmasında Dataverse tarafından otomatik olarak doldurulur. Bu nedenle, image'lerin gereksiz alanlarla şişirilmesi, fark edilmeyen bir performans maliyeti yaratır. Plugin Registration Tool'da image tanımlarken, yalnızca plugin'in gerçekten ihtiyaç duyduğu alanlar seçilmelidir. "Select All" seçeneği, geliştirme ve test aşamalarında kolaylık sağlasa da, üretim ortamında maliyete dönüşür.
+
+Aynı step için birden fazla Pre image veya Post image tanımlamanın da bir maliyeti vardır. Her image, ayrı bir okuma işlemi gerektirir. Eğer iki farklı image yerine, biraz daha geniş tek bir image kullanmak mümkünse, ikincisi tercih edilmelidir.
+
+== Early Exit
+
+Bir plugin, çalışmasına gerek olmayan durumları mümkün olan en erken noktada tespit edip çıkmalıdır. Bu, gereksiz kod çalıştırmayı ve servis çağrısı yapmayı önler.
+
+Mesaj kontrolü en başta yapılmalıdır:
+
+[source,csharp]
+----
+if (context.MessageName != "Update")
+    return;
+----
+
+`Depth` kontrolü, plugin'in kendi tetiklediği işlemlerle tekrar tekrar çağrılmasını engeller:
+
+[source,csharp]
+----
+if (context.Depth > 1)
+    return;
+----
+
+Hedef entity'nin mantıksal adı kontrol edilmelidir. Aynı plugin birden fazla tabloya kaydedilmiş olabilir:
+
+[source,csharp]
+----
+if (target.LogicalName != "lead")
+    return;
+----
+
+Alan değişikliği kontrolü, Update mesajında plugin'in yalnızca ilgili alan değiştiğinde çalışmasını sağlar:
+
+[source,csharp]
+----
+if (!target.Attributes.Contains("companyname"))
+    return;
+----
+
+Bu kontroller, plugin'in en üst satırlarında, henüz hiçbir servis çağrısı yapılmadan gerçekleştirilmelidir.
+
+== Önbelleğe Alma (Caching)
+
+Bir plugin, aynı veriyi birden fazla kez sorguluyorsa, bu veriyi kısa süreliğine önbellekte tutmak performansı artırır. Özellikle konfigürasyon değerleri, sabit listeler veya sık başvurulan referans kayıtları için bu yaklaşım etkilidir.
+
+Plugin'ler stateless olduğu için, önbellek mekanizması olarak statik bir `ConcurrentDictionary` veya `MemoryCache` kullanılabilir. Ancak önbelleğin, veri değiştiğinde güncelliğini yitireceği unutulmamalıdır. Bu nedenle, önbellek süresi kısa tutulmalı (örneğin birkaç dakika) ve kritik doğruluk gerektiren senaryolarda önbellekten kaçınılmalıdır.
+
+[source,csharp]
+----
+private static readonly MemoryCache cache = MemoryCache.Default;
+
+public static string GetConfigValue(IOrganizationService service, string key)
+{
+    if (cache.Get(key) is string cachedValue)
+        return cachedValue;
+
+    // Veri tabanından sorgula
+    Entity config = service.Retrieve("crmserisi_config", keyId, 
+        new ColumnSet("value"));
+    string value = config.GetAttributeValue<string>("value");
+
+    cache.Set(key, value, DateTimeOffset.UtcNow.AddMinutes(5));
+    return value;
+}
+----
+
+== Toplu İşlemler
+
+Birden çok bağımsız kaydı oluşturmak veya güncellemek gerektiğinde, her biri için ayrı bir `service.Create` veya `service.Update` çağrısı yapmak yerine `ExecuteMultipleRequest` kullanılmalıdır. Bu, ağ gidiş-gelişlerini tek bir çağrıya indirir ve toplam işlem süresini önemli ölçüde kısaltır.
+
+Ancak `ExecuteMultipleRequest`, içindeki her alt isteği ayrı bir transaction olarak çalıştırır. Eğer işlemlerin atomik olması gerekiyorsa, bunun yerine tek bir transaction içinde çalışan bir Custom API veya farklı bir yaklaşım tercih edilmelidir.
+
+== Uzun Süren İşlemleri Asynchronous'a Taşıma
+
+Synchronous plugin'ler, kullanıcının beklediği süre içinde tamamlanmak zorundadır. İki dakikayı aşan synchronous plugin çalışmaları, platform tarafından sonlandırılır. Bu nedenle, dış servis çağrıları, ağır hesaplamalar veya toplu veri işleme gibi zaman alan iş mantığı, asynchronous plugin'lere veya Power Automate akışlarına taşınmalıdır.
+
+Bir yöntem, synchronous plugin'de yalnızca kritik kontrolleri yapıp işlemi onaylamak, ardından asıl iş mantığını Post-Operation aşamasına kaydedilmiş bir asynchronous plugin'de yürütmektir.
+
+[source,csharp]
+----
+// Synchronous plugin'de
+if (context.Stage == (int)StageEnum.PreOperation)
+{
+    // Yalnızca hızlı doğrulamalar
+    if (string.IsNullOrEmpty(companyName))
+        throw new InvalidPluginExecutionException("Şirket adı boş olamaz.");
+}
+
+// Asynchronous plugin'de (Post-Operation, Async)
+if (context.Stage == (int)StageEnum.PostOperation)
+{
+    // Dış servise bildirim gönder, e-posta at, vb.
+}
+----
+
+== Kaçınılması Gerekenler
+
+Bazı kullanımlar, performansı belirgin şekilde düşürür ve plugin'in güvenilirliğini zedeler.
+
+`Thread.Sleep()` veya benzeri bekleme komutları plugin içinde kullanılmamalıdır. Plugin, pipeline'da işgal ettiği kaynağı bloke eder ve diğer işlemlerin önünde engel oluşturur. Bekleme gerektiren senaryolar, zamanlanmış bir akışa veya Azure Functions'a devredilmelidir.
+
+`service.Execute` ile aynı kayda, aynı plugin içinden tekrar güncelleme yapmak, sonsuz döngü riski taşır. Plugin, kendi tetiklediği güncellemeyle yeniden çağrıldığında `Depth` artsa da, bu durum yine de ek işlem maliyeti yaratır. Mümkünse, Pre-Operation aşamasında `Target` üzerinden değişiklik yapılarak ek bir güncelleme çağrısından kaçınılmalıdır.
+
+Her plugin çalışmasında aynı veriyi tekrar tekrar sorgulamak yerine, `SharedVariables` üzerinden aynı transaction'daki diğer plugin'lere veri aktarılabilir. Bu, aynı kaydın birden fazla kez Retrieve edilmesini önler.
+
+== Sonuç
+
+Plugin performans optimizasyonu, gereksiz veri taşımayı azaltmak, çağrı sayısını minimumda tutmak, erken çıkış kontrolleri yapmak ve uzun süren işlemleri asynchronous'a taşımak gibi bir dizi bilinçli karardan oluşur. Bu kararların her biri, kullanıcı deneyimini doğrudan etkileyen işlem süresini kısaltır. Plugin yazarken, kodun yalnızca doğru çalışması değil, aynı zamanda hızlı ve öngörülebilir olması da hedeflenmelidir. Bir sonraki yazıda, plugin'lerin birim testleri ele alınacaktır.

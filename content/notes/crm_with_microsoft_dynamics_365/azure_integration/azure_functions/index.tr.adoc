@@ -1,0 +1,181 @@
+---
+title: "Azure Functions ile Entegrasyonu"
+date: "2026-05-16T13:18:15+03:00"
+draft: false
+weight: 1
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Plugin'ler, Dataverse işlem hattı içinde çalışır ve iki dakikalık bir zaman sınırına tabidir. Bu sınır, dış bir servise büyük veri göndermek, uzun süren bir hesaplama yapmak veya toplu dosya işleme gibi senaryolar için yetersiz kalır. Ayrıca plugin'ler, Dataverse sunucusunun kaynaklarını kullandığı için, ağır işlemlerin burada yapılması sistem performansını olumsuz etkiler. Azure Functions, bu tür senaryoları Dataverse dışına taşımak için kullanılan sunucusuz (serverless) bir Azure hizmetidir. Bu yazıda, Azure Functions'ın plugin'lerle ve Dataverse Web API ile nasıl entegre edileceği ele alınmaktadır.
+
+== Azure Functions
+
+Azure Functions, belirli bir olay tarafından tetiklenen ve belirli bir süre çalışan küçük kod parçalarıdır. Sunucusuz mimariye sahiptir; yani geliştirici bir sunucu yönetmek zorunda kalmaz. Function, yalnızca çalıştırıldığı süre için ücretlendirilir ve trafik arttıkça Azure tarafından otomatik olarak ölçeklendirilir.
+
+Bir Azure Function, çeşitli tetikleyicilerle başlatılabilir. HTTP isteği, kuyruk mesajı, zamanlanmış görev veya başka bir Azure hizmetindeki olay tetikleyici olarak kullanılabilir. Dynamics 365 entegrasyonunda en sık kullanılan iki tetikleyici HTTP ve Service Bus kuyruğudur.
+
+HTTP tetikleyicili bir Function, bir URL'ye yapılan istekle başlatılır. Plugin, işlemi tamamladıktan sonra Function'ın URL'sine bir HTTP çağrısı yaparak ağır iş mantığını devreder. Function, gelen isteği işler ve isteğe bağlı olarak plugin'e bir yanıt dönebilir.
+
+Service Bus tetikleyicili bir Function ise bir kuyruğa mesaj bırakıldığında tetiklenir. Plugin, Dataverse'in Service Bus entegrasyonu aracılığıyla kuyruğa bir mesaj gönderir. Bu mesaj, Function tarafından alınır ve işlenir. Bu yöntem, güvenilir mesajlaşma ve yeniden deneme mekanizmaları sağladığı için üretim senaryolarında sık tercih edilir.
+
+== Plugin'den Azure Function Çağırma
+
+Bir plugin'in içinden Azure Function'ı çağırmak için HTTP istemcisi kullanılır. Aşağıdaki örnek, bir fırsat kazanıldığında fatura oluşturma işlemini bir Azure Function'a devreder:
+
+[source,csharp]
+----
+public void Execute(IServiceProvider serviceProvider)
+{
+    IPluginExecutionContext context =
+        (IPluginExecutionContext)serviceProvider.GetService(
+            typeof(IPluginExecutionContext));
+    ITracingService tracingService =
+        (ITracingService)serviceProvider.GetService(typeof(ITracingService));
+
+    // Yalnızca fırsat kazanıldığında çalış
+    if (context.MessageName != "Update")
+        return;
+
+    Entity target = (Entity)context.InputParameters["Target"];
+    if (!target.Attributes.Contains("statecode"))
+        return;
+
+    OptionSetValue stateCode = target.GetAttributeValue<OptionSetValue>("statecode");
+    if (stateCode.Value != 1) // 1 = Kazanıldı
+        return;
+
+    // Function çağrısını asenkron yap, plugin'i bekletme
+    string functionUrl = "https://myfunction.azurewebsites.net/api/CreateInvoice";
+    
+    // PreImage'dan gerekli alanları al
+    Entity preImage = context.PreEntityImages["preImage"];
+    var payload = new
+    {
+        OpportunityId = preImage.Id,
+        CustomerId = preImage.GetAttributeValue<EntityReference>("customerid")?.Id,
+        Amount = preImage.GetAttributeValue<Money>("estimatedvalue")?.Value ?? 0,
+        CloseDate = DateTime.UtcNow
+    };
+
+    string json = JsonConvert.SerializeObject(payload);
+
+    // Fire-and-forget: plugin'i bekletmeden çağrıyı yap
+    Task.Run(async () =>
+    {
+        try
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Add("x-functions-key", "your_function_key");
+                StringContent content = new StringContent(json, Encoding.UTF8, "application/json");
+                HttpResponseMessage response = await client.PostAsync(functionUrl, content);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    tracingService.Trace(
+                        "Function çağrısı başarısız. Status: {0}, Body: {1}",
+                        response.StatusCode, await response.Content.ReadAsStringAsync());
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            tracingService.Trace("Function çağrısı sırasında hata: {0}", ex.Message);
+        }
+    }).ConfigureAwait(false);
+}
+----
+
+Bu örnekte, plugin fırsatın kazanıldığını tespit eder. Ardından fırsatın ID'si, müşterisi ve tutarı gibi bilgileri JSON'a serileştirip Function URL'sine gönderir. Çağrı `Task.Run` ile yapıldığı için plugin, Function'ın yanıtını beklemeden çalışmasını tamamlar. Bu, kullanıcı deneyimini etkilemeden ağır işlemi devretmenin bir yoludur.
+
+== Azure Function'un Yapısı
+
+Azure Function tarafında, gelen istek işlenir ve gerekli Dataverse işlemleri yapılır. Function, Dataverse Web API'yi veya Organization Service'i kullanarak kayıt oluşturabilir, güncelleyebilir veya dış servislere veri gönderebilir.
+
+Aşağıda, gelen isteği alıp Dataverse'te fatura benzeri bir kayıt oluşturan basit bir HTTP tetikleyicili Function görülmektedir:
+
+[source,csharp]
+----
+public static class CreateInvoiceFunction
+{
+    [FunctionName("CreateInvoice")]
+    public static async Task<IActionResult> Run(
+        [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequest req,
+        ILogger log)
+    {
+        string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+        dynamic data = JsonConvert.DeserializeObject(requestBody);
+
+        Guid opportunityId = data.OpportunityId;
+        Guid customerId = data.CustomerId;
+        decimal amount = data.Amount;
+
+        // Dataverse'e bağlan ve fatura kaydı oluştur
+        string resource = Environment.GetEnvironmentVariable("DataverseUrl");
+        string clientId = Environment.GetEnvironmentVariable("ClientId");
+        string clientSecret = Environment.GetEnvironmentVariable("ClientSecret");
+        string tenantId = Environment.GetEnvironmentVariable("TenantId");
+
+        var app = ConfidentialClientApplicationBuilder
+            .Create(clientId)
+            .WithClientSecret(clientSecret)
+            .WithAuthority($"https://login.microsoftonline.com/{tenantId}")
+            .Build();
+
+        var result = await app.AcquireTokenForClient(
+                new[] { resource + "/.default" })
+            .ExecuteAsync();
+
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", result.AccessToken);
+
+            var invoice = new
+            {
+                name = "Fatura - " + DateTime.UtcNow.ToString("yyyyMMdd"),
+                crmserisi_amount = amount,
+                crmserisi_opportunityid@odata.bind =
+                    $"/opportunities({opportunityId})"
+            };
+
+            StringContent content = new StringContent(
+                JsonConvert.SerializeObject(invoice),
+                Encoding.UTF8,
+                "application/json");
+
+            HttpResponseMessage response = await client.PostAsync(
+                resource + "/api/data/v9.2/crmserisi_invoices", content);
+
+            if (response.IsSuccessStatusCode)
+                return new OkObjectResult("Fatura oluşturuldu");
+
+            return new StatusCodeResult((int)response.StatusCode);
+        }
+    }
+}
+----
+
+Function, ortam değişkenlerinden aldığı kimlik bilgileriyle Dataverse'e bağlanır. Bu, hassas bilgilerin kodda gömülü olmamasını sağlar. Ardından Web API ile özel bir fatura tablosuna kayıt ekler ve fırsatı bu kayda bağlar.
+
+== Zaman Aşımı ve Yeniden Deneme
+
+Azure Function'lar, tüketim planında (consumption plan) varsayılan olarak 5 dakika, en fazla 10 dakika çalışabilir. Premium planda ise bu süre 60 dakikaya kadar uzatılabilir. Eğer işlem bu sürelerden daha uzun sürecekse, iş mantığı birden fazla Function'a bölünmeli veya Azure Batch gibi daha uygun bir hizmet kullanılmalıdır.
+
+Plugin'den yapılan HTTP çağrısı başarısız olursa, varsayılan olarak yeniden denenmez. Bu nedenle, kritik işlemler için daha güvenilir bir mesajlaşma altyapısı tercih edilmelidir. Service Bus, yeniden deneme ve en az bir kez teslimat (at-least-once delivery) garantisi sunarak bu açığı kapatır. Azure Function'lar bir Service Bus kuyruğuna bağlandığında, mesaj başarıyla işlenene kadar Function otomatik olarak tetiklenmeye devam eder.
+
+== Plugin ve Function Arasındaki İş Bölümü
+
+Plugin ve Azure Function arasındaki iş bölümü şu prensiplere dayanır: plugin, Dataverse işleminin atomikliğini ve anlık doğrulamayı sağlar. Function ise uzun süren, dış kaynaklara bağımlı veya hesaplama ağırlıklı işleri üstlenir.
+
+Bir fırsat kazanıldığında, plugin yalnızca fırsatın kazanılabilir durumda olduğunu doğrular ve Function'ı tetikler. Function faturayı oluşturur, muhasebe sistemine entegre eder ve müşteriye bildirim e-postası gönderir. Plugin 200 milisaniyede tamamlanırken, Function birkaç saniye veya dakika sürebilir. İkisinin birbirini beklemesi gerekmez.
+
+== Sonuç
+
+Azure Functions, Dataverse plugin'lerinin zaman ve kaynak sınırlarını aşmak için güçlü bir araçtır. Plugin, kritik iş mantığını yürütüp uzun süren işleri Function'a devrederken, Function Dataverse Web API ile etkileşime devam eder ve dış sistemlerle entegrasyonu sağlar. Bu iş bölümü, hem kullanıcı deneyimini hızlı tutar hem de karmaşık entegrasyon senaryolarını mümkün kılar. Bir sonraki yazıda, bu entegrasyonu daha güvenilir kılan Service Bus ve Webhook mekanizmaları ele alınacaktır.

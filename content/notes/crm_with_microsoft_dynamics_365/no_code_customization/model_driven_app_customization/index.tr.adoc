@@ -1,0 +1,87 @@
+---
+title: "Model-Driven Uygulama Özelleştirme: Formlar ve Görünümler"
+date: "2026-05-16T09:34:51+03:00"
+draft: false
+weight: 3
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Model-driven uygulamalar, veri modeli üzerine otomatik olarak inşa edilen arayüzler sunar. Ancak hazır gelen bu arayüz, her iş senaryosuna birebir uymaz. Hangi alanın görüneceği, alanların hangi sırayla ve hangi sekmeler altında yer alacağı, kullanıcının kayıt listesinde hangi sütunları göreceği ve hangi filtrelerin uygulanacağı, uygulamanın kullanım verimliliğini doğrudan etkiler. Bu yazıda, model-driven uygulamalarda form ve görünüm özelleştirme adımları ele alınmaktadır.
+
+== Formlar
+
+Form, bir kaydın detaylarının görüntülendiği ve düzenlendiği ana ekrandır. Model-driven bir uygulamada her tablonun en az bir ana formu (main form) bulunur. Formlar, form tasarımcısı aracılığıyla özelleştirilir.
+
+=== Form Türleri
+
+Dataverse, farklı kullanım amaçları için birden fazla form türü sunar.
+
+- **Ana Form (Main Form):** Kaydın tüm ayrıntılarını gösteren, sekmeler, bölümler ve alt listelerle zenginleştirilebilen ana arayüzdür. Kullanıcı bir kayıt açtığında karşısına çıkan form budur. Her tablo için birden fazla ana form tanımlanabilir; hangi formun gösterileceği güvenlik rolüne veya kullanıcının bağlamına göre belirlenebilir.
+
+- **Hızlı Oluşturma Formu (Quick Create Form):** Kullanıcının bir kaydı hızlıca oluşturması için sadeleştirilmiş, genellikle birkaç temel alandan oluşan formdur. Ana formun aksine, sekmeler ve karmaşık bileşenler içermez. Kayıt oluşturulduktan sonra kullanıcı dilerse ana forma geçebilir.
+
+- **Hızlı Görünüm Formu (Quick View Form):** Bir arama alanının işaret ettiği kaydın özet bilgilerini, ana form üzerinde salt okunur bir kart olarak gösterir. Örneğin bir fırsat formunda, ilgili hesabın adını, telefon numarasını ve adresini bir hızlı görünüm formuyla göstermek mümkündür.
+
+- **Kart Formu (Card Form):** Mobil uygulamalar ve etkileşimli panolarda kullanılan, kaydın küçük bir özetini sunan kompakt formdur.
+
+=== Form Tasarımcısı
+
+Form tasarımcısı, Maker Portal'da bir tablonun "Formlar" sekmesinden açılır. Tasarımcı üç ana bölgeden oluşur: sol tarafta sürüklenebilir bileşenler paneli, ortada formun canlı önizlemesi ve sağ tarafta seçili bileşenin özellikler paneli.
+
+Forma bir alan eklemek için, sol paneldeki alanlar listesinden ilgili alan sürüklenip form üzerindeki bir bölüme bırakılır. Alanın genişliği, etiketi ve salt okunurluk gibi özellikleri sağ panelden ayarlanabilir.
+
+Form, sekmeler (tabs) ve bölümler (sections) ile yapılandırılır. Sekme, formun üst kısmında yatay olarak sıralanan ana bölmelerdir. Her sekme bir veya birden fazla bölüm içerir. Bölüm ise bir grup alanı bir araya getiren kapsayıcıdır. Bölümlere isteğe bağlı olarak bir başlık verilebilir; alanlar bu başlık altında sıralanır. Sekmeler ve bölümler, formun karmaşık veri yapısını düzenli bir hale getirir.
+
+Form tasarımcısı, alan eklemenin yanı sıra şu bileşenleri de destekler:
+
+- **Alt Liste (Subgrid):** İlişkili bir tablodaki kayıtları, ana kaydın formu üzerinde liste halinde gösterir. Örneğin bir hesap formunda, o hesaba ait tüm irtibatların listesi bir alt liste olarak eklenebilir.
+
+- **Zaman Çizelgesi (Timeline):** Kayda bağlı aktiviteleri, notları ve gönderileri kronolojik sırayla gösterir. Kullanıcı bu bileşen üzerinden doğrudan yeni bir not ekleyebilir veya e-posta gönderebilir.
+
+- **Hızlı Görünüm Formu:** Daha önce açıklandığı gibi, ilişkili bir kaydın özet bilgilerini gösterir.
+
+- **Power BI Panosu:** Form içine gömülü bir Power BI raporu veya görseli ekler.
+
+Form özellikleri düzeyinde, formun genişliği, simgesi, başlığı ve güvenlik rolleriyle kısıtlanması gibi ayarlar yapılabilir. Ayrıca form düzeyinde olay işleyicileri (event handlers) tanımlanabilir; bu, form yüklendiğinde veya kaydedildiğinde çalışacak JavaScript fonksiyonlarını veya iş kurallarını bağlamayı sağlar. Bu konuya ilerleyen bölümlerde dönülecektir.
+
+Birden fazla ana form tanımlandığında, form sıralaması belirlenir. Sistem, kullanıcının güvenlik rolüne ve form sıralamasına göre uygun formu otomatik olarak seçer. Aynı şekilde, farklı güvenlik rollerine sahip kullanıcılar için aynı tablonun farklı formlarının gösterilmesi sağlanabilir.
+
+== Görünümler
+
+Görünüm (view), bir tablodaki kayıtların liste halinde görüntülendiği ekrandır. Kullanıcı bir tabloya sol menüden tıkladığında, varsayılan bir görünümle karşılaşır. Görünüm, hangi sütunların gösterileceğini, kayıtların hangi sırayla listeleneceğini ve hangi filtrelerin uygulanacağını tanımlar.
+
+=== Görünüm Türleri
+
+Üç tür görünüm vardır:
+
+- **Genel Görünüm (Public View):** Sistem yöneticisi veya sistem özelleştirici tarafından oluşturulan, tüm kullanıcılar tarafından görülebilen görünümdür. Bir tablonun varsayılan olarak gelen "Aktif Hesaplar", "Tüm Fırsatlar" gibi listeleri genel görünümdür.
+
+- **Kişisel Görünüm (Personal View):** Bireysel kullanıcı tarafından oluşturulan ve yalnızca o kullanıcı tarafından görülebilen görünümdür. Kullanıcı, kendi ihtiyacına göre sütunları ve filtreleri özelleştirip kişisel görünüm olarak kaydedebilir.
+
+- **Sistem Görünümü (System View):** Platform tarafından otomatik oluşturulan ve silinemeyen görünümlerdir. "İlişkili Kayıtlar" gibi alt listelerde kullanılan özel görünümler bu kapsama girer.
+
+=== Görünüm Tasarımcısı
+
+Görünüm tasarımcısı, Maker Portal'da bir tablonun "Görünümler" sekmesinden açılır. Tasarımcı, form tasarımcısına benzer bir arayüze sahiptir: sol panelde mevcut sütunlar, ortada önizleme tablosu, sağ panelde ise özellikler yer alır.
+
+Görünümün temel öğeleri şunlardır:
+
+- **Sütunlar:** Görünümde hangi alanların sütun olarak gösterileceğini belirler. Sütunlar sürüklenerek sıralanabilir; her sütunun genişliği piksel cinsinden ayarlanabilir. İlk sütun genellikle kaydın birincil alanıdır (örneğin hesap adı) ve tıklanabilir bağlantı olarak gösterilir.
+
+- **Sıralama Düzeni:** Görünümün varsayılan olarak hangi sütuna göre sıralanacağını belirler. Birden fazla sıralama kriteri art arda tanımlanabilir. Örneğin "Önce Oluşturulma Tarihi azalan, sonra Ad artan" gibi.
+
+- **Filtreleme:** Görünümün hangi kayıtları göstereceğini belirleyen koşullar bütünüdür. Görsel filtre düzenleyicisiyle AND ve OR grupları oluşturulabilir. Örneğin "Durum = Aktif AND Şehir = İstanbul" gibi. FetchXML bilgisi olan kullanıcılar, doğrudan FetchXML yazarak daha karmaşık filtreler de tanımlayabilir.
+
+- **Sıralama ve Filtreleme Kontrolleri:** Görünüm, son kullanıcıya sütun başlıklarına tıklayarak sıralama değiştirme ve filtre simgesiyle ek filtre ekleme imkanı verir. Bu kontroller, görünüm tasarımcısında etkinleştirilip devre dışı bırakılabilir.
+
+Görünümler, formlarla ve site haritasıyla yakından ilişkilidir. Bir site haritası düğmesine tıklandığında hangi görünümün açılacağı, o düğmenin özelliklerinde belirtilir. Aynı şekilde, bir form üzerindeki alt liste bileşeni de kendine ait bir görünüm kullanır.
+
+== Sonuç
+
+Formlar ve görünümler, model-driven uygulamanın kullanıcıya dokunan iki temel yüzeyidir. Formlar, kayıt detayını yapılandırır; görünümler ise kayıtların nasıl listeleneceğini ve filtreleneceğini tanımlar. Her ikisi de kod yazmadan, görsel tasarımcılar aracılığıyla özelleştirilebilir. Bu özelleştirme yetenekleri, uygulamanın iş sürecine tam olarak uymasını sağlar. Bir sonraki yazıda, kodsuz özelleştirmenin sınırları aşıldığında devreye giren plugin geliştirme konusuna giriş yapılacaktır.

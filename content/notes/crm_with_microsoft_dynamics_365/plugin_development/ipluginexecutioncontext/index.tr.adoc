@@ -1,0 +1,121 @@
+---
+title: "IPluginExecutionContext — Context Nesnesini Anlamak"
+date: "2026-05-16T12:53:30+03:00"
+draft: false
+weight: 3
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+İlk plugin yazısında `IPluginExecutionContext` nesnesini, tetikleyen olayın hedef kaydına erişmek için kullanmıştık. Ancak context, hedef kayıttan çok daha fazlasını taşır. Olayın türü, çağrıyı başlatan kullanıcı, işlemin derinliği, kaydın değişim öncesi ve sonrası görüntüleri, plugin'ler arası paylaşılan değişkenler ve daha pek çok bilgi bu nesne üzerinden edinilir. Bu yazıda, `IPluginExecutionContext`'in sunduğu tüm önemli üyelere ve bunların hangi senaryolarda kullanılacağına odaklanılmaktadır.
+
+== Context'i Elde Etmek
+
+Bir plugin'in `Execute` metodu, parametre olarak `IServiceProvider` alır. Context'e ulaşmak için bu servis sağlayıcıdan `IPluginExecutionContext` tipi talep edilir. Bu, plugin yazarken atılan ilk adımdır ve kalıp hiç değişmez:
+
+[source,csharp]
+----
+IPluginExecutionContext context =
+    (IPluginExecutionContext)serviceProvider.GetService(
+        typeof(IPluginExecutionContext));
+----
+
+Bu satırdan sonra `context` değişkeni, mevcut işleme dair tüm bilgiyi taşır hale gelir.
+
+== Message ve Stage
+
+İki temel özellik, plugin'in hangi bağlamda çalıştığını özetler: `MessageName` ve `Stage`.
+
+`MessageName`, plugin'i tetikleyen Dataverse mesajının adını döndürür. Değer; Create, Update, Delete, SetState, Assign, GrantAccess veya özel bir API mesajı olabilir. Bu özellik, aynı plugin'in birden fazla mesaja kaydedildiği durumlarda davranışı dallandırmak için kullanılır.
+
+`Stage`, plugin'in execution pipeline'daki konumunu belirtir. `PreValidation`, `PreOperation` veya `PostOperation` değerlerinden birini alır. Plugin Registration Tool'da step kaydederken seçilen aşama, işte bu özelliğe yansır.
+
+== InputParameters
+
+`InputParameters`, işleme giren verileri taşıyan bir parametre koleksiyonudur. Hangi parametrelerin bulunacağı, `MessageName` 'e bağlıdır.
+
+Create mesajında en önemli parametre `Target` 'tır. `Target`, oluşturulmakta olan kaydı bir `Entity` nesnesi olarak taşır. Pre-Operation aşamasında bu `Entity` üzerinde yapılan değişiklikler veri tabanına yansır. Post-Operation aşamasında ise `Target` salt okunur kabul edilmelidir; kayıt çoktan yazılmıştır.
+
+Update mesajında da `Target` bulunur, ancak bu kez yalnızca değişen alanları içerir. Kaydın değişmeyen alanları `Target` 'ta yer almaz. Bir alanın değişip değişmediğini anlamak için `Target.Attributes.Contains("alan_adi")` kontrolü yapılır.
+
+Delete mesajında `Target` bir `EntityReference` olarak gelir; `LogicalName` ve `Id` taşır, ancak alan değerlerini içermez.
+
+SetState mesajında `Target` 'a ek olarak `State` ve `Status` parametreleri bulunur. Bunlar, kaydın geçeceği yeni durum ve durum nedenini taşır.
+
+Assign mesajında `Target` bir `EntityReference`, `Assignee` ise atamanın yapılacağı kullanıcı veya takımı gösteren bir `EntityReference`'tır.
+
+== OutputParameters
+
+`OutputParameters`, işlemin çıktılarını taşır. Pre-Operation aşamasında henüz işlem tamamlanmadığı için bu koleksiyon genellikle boştur. Post-Operation aşamasında ise anlamlı değerler içerir.
+
+Create mesajında `OutputParameters["id"]`, yeni oluşturulan kaydın GUID'ini verir. Bu değer, Post-Operation aşamasında kayda başka işlemler yapmak gerektiğinde kullanılır.
+
+== PreEntityImages ve PostEntityImages
+
+Bu iki koleksiyon, plugin'in kayıt değişmeden önceki ve değiştikten sonraki tam görüntüsüne erişmesini sağlar. Görüntüler (images), Plugin Registration Tool'da step kaydedilirken tanımlanır. Her görüntüye bir alias (takma ad) verilir ve context üzerinden bu alias ile erişilir.
+
+`PreEntityImages`, işlem başlamadan hemen önceki kayıt anlık görüntüsüdür. Create mesajında kayıt henüz var olmadığı için boştur. Update ve Delete mesajlarında ise kaydın değişmeden önceki tüm alanlarını taşır. Pre-Operation aşamasında `Target` yalnızca değişen alanları içerdiği için, değişmeyen bir alanın eski değerine ihtiyaç duyulduğunda `PreEntityImages` kullanılır.
+
+`PostEntityImages`, işlem tamamlandıktan sonraki kayıt görüntüsüdür. Yalnızca Post-Operation aşamasında kullanılabilir. Create mesajında yeni oluşturulan kaydın tüm alanlarını, Update mesajında ise kaydın güncellenmiş tam halini içerir.
+
+Bir görüntüye erişmek için şu kod kullanılır:
+
+[source,csharp]
+----
+if (context.PreEntityImages.Contains("preImage"))
+{
+    Entity preImage = context.PreEntityImages["preImage"];
+    string eskiDeger = preImage.GetAttributeValue<string>("fieldname");
+}
+----
+
+== SharedVariables
+
+`SharedVariables`, aynı transaction içinde çalışan plugin'ler arasında veri paylaşımı için kullanılan bir anahtar-değer deposudur. Bir plugin, Pre-Operation aşamasında bir hesaplama yapıp sonucu `SharedVariables`'a yazabilir. Aynı transaction'daki Post-Operation aşamasında çalışan başka bir plugin bu değeri okuyabilir. Bu mekanizma, aynı hesaplamayı birden fazla kez yapmaktan kaçınmayı sağlar.
+
+[source,csharp]
+----
+// Yazma
+context.SharedVariables["HesaplananDeger"] = 42;
+
+// Okuma
+if (context.SharedVariables.Contains("HesaplananDeger"))
+{
+    int deger = (int)context.SharedVariables["HesaplananDeger"];
+}
+----
+
+== Kullanıcı Bilgileri
+
+Context, işlemi başlatan kullanıcı hakkında çeşitli bilgiler taşır.
+
+`UserId`, işlemi başlatan kullanıcının GUID'idir. `InitiatingUserId` ise işlemi orijinal olarak başlatan kullanıcıyı gösterir. Bir plugin başka bir plugin'i tetiklediğinde, içteki plugin için `UserId` değişirken `InitiatingUserId` orijinal kullanıcıyı işaret etmeye devam eder. Denetim veya loglama senaryolarında bu ayrım önem taşır.
+
+`BusinessUnitId`, kullanıcının bağlı olduğu iş biriminin GUID'idir. `OrganizationId` ve `OrganizationName` ise ortam bilgilerini taşır.
+
+== Depth
+
+`Depth`, iç içe geçmiş plugin çağrılarının seviyesini gösteren bir tam sayıdır. Kullanıcı tarafından başlatılan ilk işlemde `Depth` değeri 1'dir. Bu işlem başka bir plugin'i tetiklerse, ikinci plugin'de `Depth` 2 olur. Sonsuz döngüleri önlemek için plugin'ler genellikle `Depth > 1` olduğunda işlem yapmaktan kaçınır. Bu kontrol, bir plugin'in kendi tetiklediği güncellemelerle tekrar tekrar çağrılmasını engeller.
+
+[source,csharp]
+----
+if (context.Depth > 1)
+    return;
+----
+
+== Mode
+
+`Mode`, plugin'in synchronous (0) veya asynchronous (1) olarak çalıştığını belirtir. Bu değer, Plugin Registration Tool'da step kaydedilirken seçilen Execution Mode'a karşılık gelir.
+
+== ParentContext
+
+`ParentContext`, mevcut işlemi tetikleyen bir üst işlem varsa, onun context'ine erişim sağlar. Örneğin bir plugin içinden Organization Service ile bir kayıt güncellendiğinde, bu güncelleme başka bir plugin'i tetikleyebilir. Tetiklenen plugin'in `ParentContext`'i, kendisini başlatan plugin'in context'idir. Derinlemesine hata ayıklama veya karmaşık iş mantığı zincirlerinde kullanılır.
+
+== Sonuç
+
+`IPluginExecutionContext`, plugin'in çalışma anındaki tüm bağlamı taşıyan merkezi nesnedir. `MessageName` ve `Stage` ile olayın türü ve konumu belirlenir. `InputParameters` ve `OutputParameters` ile işleme giren ve çıkan verilere erişilir. `PreEntityImages` ve `PostEntityImages` ile kaydın değişim öncesi ve sonrası halleri okunur. `SharedVariables` aynı transaction'daki plugin'ler arası veri aktarımını sağlar. `UserId`, `Depth` ve `ParentContext` gibi özellikler ise güvenlik, döngü kontrolü ve hata ayıklama senaryolarını destekler. Context nesnesine hakim olmak, plugin geliştirmenin temel taşlarından biridir. Bir sonraki yazıda, context'in yanında plugin'in ikinci vazgeçilmezi olan Organization Service ve CRUD işlemleri ele alınacaktır.

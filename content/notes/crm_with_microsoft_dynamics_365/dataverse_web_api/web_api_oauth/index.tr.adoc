@@ -1,0 +1,190 @@
+---
+title: "OAuth ile Kimlik Doğrulama"
+date: "2026-05-16T13:18:14+03:00"
+draft: false
+weight: 4
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Dataverse Web API'ye yapılan her istek, geçerli bir erişim belirteci (access token) taşımak zorundadır. Bu belirteç, istemcinin kimliğini ve yetkilerini kanıtlayan bir güvenlik anahtarıdır. Dataverse, kimlik doğrulama için Microsoft Entra ID (eski adıyla Azure Active Directory) tarafından yönetilen OAuth 2.0 protokolünü kullanır. Bu yazıda, OAuth 2.0'ın temel kavramları, Dataverse Web API'ye erişmek için kullanılan iki ana akış —istemci kimlik bilgileri ve temsilci— ve bu akışlarla belirteç edinme adımları ele alınmaktadır.
+
+== OAuth 2.0
+
+OAuth 2.0, istemci uygulamaların kaynak sunuculara kullanıcı adına veya kendi adına erişmesini sağlayan bir yetkilendirme çerçevesidir. Kaynak sahibi (kullanıcı) ile istemci arasındaki yetki devri, bir yetkilendirme sunucusu aracılığıyla gerçekleştirilir.
+
+OAuth 2.0 akışında dört rol bulunur. Kaynak sahibi (resource owner), veriye erişim izni verecek olan kullanıcıdır. İstemci (client), erişim talep eden uygulamadır. Yetkilendirme sunucusu (authorization server), kimlik doğrulama ve belirteç verme işlemlerini yürütür; Dataverse için bu rolü Microsoft Entra ID üstlenir. Kaynak sunucusu (resource server) ise korunan veriyi barındıran sunucudur; burada Dataverse'in kendisidir.
+
+Temel akış şöyle işler. İstemci, yetkilendirme sunucusuna başvurur ve bir erişim belirteci talep eder. Yetkilendirme sunucusu, istemcinin kimliğini ve varsa kullanıcının rızasını doğrular. Doğrulama başarılı olursa, istemciye bir erişim belirteci verir. İstemci bu belirteci, kaynak sunucusuna yaptığı her istekte `Authorization: Bearer <token>` başlığıyla sunar.
+
+== Uygulama Kaydı
+
+Dataverse Web API'ye erişecek her uygulama, önce Microsoft Entra ID'de bir uygulama kaydı (app registration) oluşturmalıdır. Bu kayıt, uygulamaya bir kimlik kazandırır ve hangi kaynaklara hangi yetkilerle erişebileceğini tanımlar.
+
+Azure Portal'da Microsoft Entra ID > App registrations bölümüne gidilir ve "New registration" seçilir. Uygulamaya bir ad verilir; örneğin "CRM Entegrasyon Uygulaması". Desteklenen hesap türü olarak "Accounts in this organizational directory only" seçilir. Yönlendirme URI'si, temsilci akışı kullanılacaksa belirtilir; arka plan servisleri için boş bırakılabilir.
+
+Kayıt tamamlandıktan sonra, uygulamanın özet sayfasında `Application (client) ID` ve `Directory (tenant) ID` değerleri görünür. Bu iki değer, belirteç talebinde bulunurken kullanılacaktır.
+
+Ardından API izinleri yapılandırılır. "API permissions" bölümünde "Add a permission" tıklanır. "Dynamics CRM" seçilir. İhtiyaca göre "Delegated permissions" (temsilci, kullanıcı adına) veya "Application permissions" (uygulama adına) altından gerekli izinler eklenir. Tipik olarak `user_impersonation` temsilci izni veya `access_as_application` uygulama izni kullanılır. İzinler eklendikten sonra "Grant admin consent" ile yetkilendirme tamamlanır.
+
+Son olarak, istemci kimlik bilgileri akışı için bir istemci gizli anahtarı (client secret) veya sertifika oluşturulur. "Certificates & secrets" bölümünde "New client secret" ile bir gizli anahtar oluşturulur ve değeri güvenli bir yerde saklanır. Bu değer, oluşturulduktan sonra yalnızca bir kez görüntülenebilir.
+
+== İstemci Kimlik Bilgileri Akışı
+
+İstemci kimlik bilgileri akışı (client credentials grant), bir kullanıcının etkileşimi olmadan, uygulamanın kendi kimliğiyle kaynaklara erişmesini sağlar. Arka plan servisleri, zamanlanmış görevler ve servisler arası entegrasyonlar için uygundur.
+
+Belirteç almak için, Entra ID'nin belirteç uç noktasına (`/oauth2/v2.0/token`) bir POST isteği yapılır. İstek gövdesi `application/x-www-form-urlencoded` formatındadır:
+
+[source,http]
+----
+POST /<tenant_id>/oauth2/v2.0/token HTTP/1.1
+Host: login.microsoftonline.com
+Content-Type: application/x-www-form-urlencoded
+
+client_id=<application_id>
+&client_secret=<client_secret>
+&scope=https://<org>.crm.dynamics.com/.default
+&grant_type=client_credentials
+----
+
+`scope` parametresi, erişmek istenen kaynağı belirtir. Dataverse için bu, ortam URL'sinin sonuna `/.default` eklenerek oluşturulur. `.default` kapsamı, uygulama kaydında onaylanan tüm uygulama izinlerini kapsar.
+
+Başarılı yanıt şöyledir:
+
+[source,json]
+----
+{
+    "token_type": "Bearer",
+    "expires_in": 3600,
+    "access_token": "eyJ0eXAiOi..."
+}
+----
+
+`access_token` değeri, Dataverse Web API isteklerinde `Authorization: Bearer <token>` başlığıyla kullanılır.
+
+C# ile belirteç almak için `Microsoft.Identity.Client` (MSAL) kütüphanesi kullanılır:
+
+[source,csharp]
+----
+var clientId = "<application_id>";
+var clientSecret = "<client_secret>";
+var authority = "https://login.microsoftonline.com/<tenant_id>";
+var resource = "https://<org>.crm.dynamics.com/";
+
+var app = ConfidentialClientApplicationBuilder
+    .Create(clientId)
+    .WithClientSecret(clientSecret)
+    .WithAuthority(new Uri(authority))
+    .Build();
+
+var result = await app.AcquireTokenForClient(new[] { resource + ".default" })
+    .ExecuteAsync();
+
+string token = result.AccessToken;
+----
+
+Bu yöntemle alınan belirteç, uygulamanın kendi yetkileriyle çalışır. Hangi kayıtlara erişebileceği, uygulama kaydında atanan izinlere bağlıdır.
+
+== Temsilci Akışı
+
+Temsilci akışı (authorization code grant), bir kullanıcının kimliğiyle ve onun adına kaynaklara erişmek için kullanılır. Kullanıcının etkileşimli olarak oturum açması ve rıza vermesi gerekir. Web uygulamaları, masaüstü uygulamaları ve mobil uygulamalar için uygundur.
+
+Bu akış iki adımda gerçekleşir. İlk adımda, kullanıcı Entra ID'nin yetkilendirme uç noktasına yönlendirilir. Tarayıcıda oturum açar ve uygulamaya erişim izni verir. Yetkilendirme sunucusu, uygulamaya bir yetkilendirme kodu (authorization code) döndürür.
+
+İkinci adımda, uygulama bu kodu kullanarak belirteç uç noktasından bir erişim belirteci talep eder. Bu adım, sunucu tarafında gerçekleşir ve kullanıcıya görünmez.
+
+Yetkilendirme uç noktasına yapılan istek şöyledir:
+
+[source,http]
+----
+GET /<tenant_id>/oauth2/v2.0/authorize HTTP/1.1
+Host: login.microsoftonline.com
+
+?client_id=<application_id>
+&response_type=code
+&redirect_uri=https://myapp.example.com/callback
+&scope=https://<org>.crm.dynamics.com/user_impersonation offline_access
+----
+
+Kullanıcı onay verdikten sonra, tarayıcı `redirect_uri` adresine bir `code` parametresiyle yönlendirilir. Bu kod, belirteç talebinde kullanılır:
+
+[source,http]
+----
+POST /<tenant_id>/oauth2/v2.0/token HTTP/1.1
+Host: login.microsoftonline.com
+Content-Type: application/x-www-form-urlencoded
+
+client_id=<application_id>
+&client_secret=<client_secret>
+&code=<authorization_code>
+&redirect_uri=https://myapp.example.com/callback
+&grant_type=authorization_code
+&scope=https://<org>.crm.dynamics.com/user_impersonation
+----
+
+Başarılı yanıt, erişim belirtecine ek olarak bir yenileme belirteci (refresh token) de içerir:
+
+[source,json]
+----
+{
+    "token_type": "Bearer",
+    "expires_in": 3600,
+    "access_token": "eyJ0eXAiOi...",
+    "refresh_token": "AQABAAAA..."
+}
+----
+
+C# ile temsilci akışı için MSAL kütüphanesi şu şekilde kullanılır:
+
+[source,csharp]
+----
+var app = PublicClientApplicationBuilder
+    .Create(clientId)
+    .WithAuthority("https://login.microsoftonline.com/<tenant_id>")
+    .Build();
+
+var accounts = await app.GetAccountsAsync();
+var result = await app.AcquireTokenSilent(
+        new[] { "https://<org>.crm.dynamics.com/user_impersonation" },
+        accounts.FirstOrDefault())
+    .ExecuteAsync()
+    .ConfigureAwait(false);
+
+// Sessiz belirteç alınamazsa, AcquireTokenInteractive kullanılır
+if (result == null)
+{
+    result = await app.AcquireTokenInteractive(
+            new[] { "https://<org>.crm.dynamics.com/user_impersonation" })
+        .ExecuteAsync();
+}
+
+string token = result.AccessToken;
+----
+
+Temsilci akışıyla alınan belirteç, kullanıcının güvenlik rolleri çerçevesinde çalışır. Kullanıcının Dataverse'te erişemediği bir kayda, bu belirteçle erişilemez.
+
+== Önemli Noktalar
+
+Erişim belirteçlerinin bir ömrü vardır. Varsayılan olarak 60-90 dakika arasında geçerlidir. Süresi dolan bir belirteçle yapılan istekler `401 Unauthorized` hatası döner. İstemci, belirteci yenilemek için yenileme belirtecini (refresh token) kullanabilir. MSAL kütüphanesi, belirteç önbellekleme ve otomatik yenileme işlemlerini yönetir.
+
+Her istekten önce yeni bir belirteç almak yerine, alınan belirteç süresi dolana kadar saklanmalı ve yeniden kullanılmalıdır. MSAL, bu önbellekleme işlemini bellekte veya isteğe bağlı olarak kalıcı bir depoda yapar.
+
+İstemci gizli anahtarı (client secret) yerine, üretim ortamlarında sertifika kullanılması önerilir. Sertifika tabanlı kimlik doğrulama, gizli anahtarın çalınma riskini ortadan kaldırır ve daha yüksek güvenlik sağlar.
+
+Dataverse Web API çağrılarında `Authorization` başlığı şu formatta olmalıdır:
+
+[source]
+----
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOi...
+----
+
+Belirtecin önünde `Bearer` anahtar sözcüğü ve bir boşluk bulunur. Bu formatın dışına çıkılması, kimlik doğrulama hatasına yol açar.
+
+== Sonuç
+
+Dataverse Web API'ye erişim, Microsoft Entra ID tarafından yönetilen OAuth 2.0 belirteçleriyle sağlanır. Uygulama kaydı, istemciye bir kimlik kazandırır ve erişeceği kaynaklara dair izinleri tanımlar. İstemci kimlik bilgileri akışı, arka plan servisleri ve servisler arası entegrasyonlar için uygunken, temsilci akışı kullanıcı adına etkileşimli erişim gerektiren senaryolarda kullanılır. Belirteç önbellekleme ve otomatik yenileme, performans ve kullanıcı deneyimi açısından önem taşır. Bu yazıyla birlikte Dataverse Web API bölümü tamamlanmıştır. Bir sonraki yazıda, Azure entegrasyonu konusuna giriş yapılacaktır.

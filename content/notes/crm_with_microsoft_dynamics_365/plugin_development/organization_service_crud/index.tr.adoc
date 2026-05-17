@@ -1,0 +1,193 @@
+---
+title: "Organization Service ile CRUD İşlemleri"
+date: "2026-05-16T13:18:09+03:00"
+draft: false
+weight: 4
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Plugin yazarken sadece tetikleyen kayda müdahale etmek çoğu zaman yeterli olmaz. Başka bir tabloda ilgili kayıt oluşturmak, bir kaydı sorgulamak, mevcut bir kaydı güncellemek veya silmek gerekebilir. Bu tür işlemler, Dataverse ile programatik olarak konuşmanın ana yolu olan `IOrganizationService` arayüzü üzerinden gerçekleştirilir. Bu yazıda, plugin içinden Organization Service'in nasıl elde edileceği ve temel CRUD (Create, Read, Update, Delete) işlemlerinin nasıl yapılacağı, çalışan kod örnekleriyle birlikte ele alınmaktadır.
+
+== Organization Service'i Elde Etmek
+
+Plugin'in `Execute` metodunda, `IServiceProvider` üzerinden `IOrganizationServiceFactory` talep edilir. Bu fabrika, mevcut plugin bağlamına uygun bir servis örneği oluşturur. Kullanılacak kullanıcı bağlamı genellikle sistem kullanıcısıdır; ancak çağrıyı yapan kullanıcının kimliğiyle de servis oluşturulabilir.
+
+[source,csharp]
+----
+IOrganizationServiceFactory factory =
+    (IOrganizationServiceFactory)serviceProvider.GetService(
+        typeof(IOrganizationServiceFactory));
+
+// Sistem kullanıcısı bağlamında servis (tüm kayıtlara erişebilir)
+IOrganizationService service = factory.CreateOrganizationService(null);
+
+// Çağrıyı başlatan kullanıcı bağlamında servis (güvenlik rolleri geçerli olur)
+IOrganizationService userService = 
+    factory.CreateOrganizationService(context.UserId);
+----
+
+Plugin'in iş mantığı ne kadar yetki gerektiriyorsa o bağlam seçilir. Hassas verileri değiştirmek için sistem kullanıcısı tercih edilirken, kullanıcının kendi yetkisiyle yapması gereken işlemler için `context.UserId` ile oluşturulan servis kullanılır.
+
+== Create İşlemi
+
+Yeni bir kayıt oluşturmak için `Entity` nesnesi hazırlanır ve `service.Create(entity)` çağrılır. Geri dönüş değeri, yeni kaydın GUID'idir.
+
+Aşağıdaki örnek, bir lead oluşturulduğunda, aynı müşteri hesabına ait bir görev (task) oluşturur. Görev, lead'i oluşturan kullanıcıya atanır ve konusu lead'in konusundan alınır.
+
+[source,csharp]
+----
+Entity task = new Entity("task");
+task["subject"] = "Lead takibi: " + leadSubject;
+task["description"] = "Yeni lead oluşturuldu, ilk temas gerekiyor.";
+task["scheduledend"] = DateTime.Now.AddDays(2);
+task["regardingobjectid"] = new EntityReference("lead", leadId);
+
+// Sahibini, çağrıyı başlatan kullanıcı yap
+task["ownerid"] = new EntityReference("systemuser", context.UserId);
+
+Guid taskId = service.Create(task);
+----
+
+`Entity` nesnesine alan değerleri, alanın mantıksal adı (logical name) ile anahtar-değer şeklinde atanır. Arama (lookup) alanları `EntityReference` ile, seçenek kümeleri (choice) `OptionSetValue` ile, tarih alanları ise `DateTime` ile doldurulur.
+
+== Read İşlemi
+
+Tek bir kaydı okumak için `service.Retrieve(entityName, id, columnSet)` yöntemi kullanılır. `ColumnSet`, hangi alanların getirileceğini belirtir. Tüm alanları getirmek için `new ColumnSet(true)` yazılabilir, ancak performans açısından yalnızca ihtiyaç duyulan alanların istenmesi önerilir.
+
+[source,csharp]
+----
+Entity lead = service.Retrieve("lead", leadId, 
+    new ColumnSet("subject", "companyname", "createdby"));
+
+string subject = lead.GetAttributeValue<string>("subject");
+string company = lead.GetAttributeValue<string>("companyname");
+EntityReference createdBy = lead.GetAttributeValue<EntityReference>("createdby");
+----
+
+`GetAttributeValue<T>()` metodu, alanın değerini belirtilen tipte döndürür. Alan dolu değilse, değer tipleri için varsayılan (default), referans tipleri için null döner.
+
+Birden çok kayıt okumak için `RetrieveMultiple` yöntemi kullanılır. Bu yöntem, bir `QueryExpression` veya `FetchExpression` alır. `QueryExpression` ile programatik sorgu oluşturma sonraki yazının konusudur; ancak basit bir örnek olarak tüm aktif lead'lerin listelenmesi şöyle yapılabilir:
+
+[source,csharp]
+----
+QueryExpression query = new QueryExpression("lead");
+query.ColumnSet = new ColumnSet("subject", "companyname");
+query.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0);
+
+EntityCollection result = service.RetrieveMultiple(query);
+foreach (Entity lead in result.Entities)
+{
+    string subject = lead.GetAttributeValue<string>("subject");
+}
+----
+
+== Update İşlemi
+
+Mevcut bir kaydı güncellemek için `Entity` nesnesi oluşturulur, yalnızca değişecek alanlar doldurulur ve `service.Update(entity)` çağrılır.
+
+[source,csharp]
+----
+Entity updateLead = new Entity("lead", leadId);
+updateLead["companyname"] = "Yeni Şirket Adı";
+updateLead["description"] = "Toplantıda güncellenen bilgiler.";
+
+service.Update(updateLead);
+----
+
+`Entity` kurucu metoduna GUID verilmesi, var olan bir kaydı güncellemek istediğimizi belirtir. Yalnızca atanan alanlar değişir; diğer alanlar etkilenmez. Bir alanı boşaltmak (null) için `null` değeri atanabilir; ancak bu, alanın zorunlu olmamasına bağlıdır.
+
+`Update` işlemi, sadece doldurulan alanları hedef alır. Gereksiz yere tüm alanları doldurmak, ne performansa ne de okunabilirliğe katkı sağlar.
+
+== Delete İşlemi
+
+Bir kaydı silmek için `service.Delete(entityName, id)` kullanılır.
+
+[source,csharp]
+----
+service.Delete("task", taskId);
+----
+
+Silme işlemi, Dataverse'in normal silme kurallarına tabidir. İlişkisel kısıtlamalar (cascade delete vs.) varsa, bunlar platform tarafından uygulanır. Plugin, silme işlemini geri alamaz; bu nedenle silme işlemi yapılmadan önce ek kontroller yapılması yaygındır.
+
+== Upsert İşlemi
+
+Bazı durumlarda bir kaydın var olup olmadığı bilinmez; varsa güncellenmesi, yoksa oluşturulması istenir. Bunun için `UpsertRequest` kullanılır. Alternatif anahtar (alternate key) tanımlanmış tablolarda, kayıt bu anahtarla aranır.
+
+[source,csharp]
+----
+Entity contact = new Entity("contact");
+contact["emailaddress1"] = "ornek@sirket.com";
+contact["firstname"] = "Ahmet";
+contact["lastname"] = "Yılmaz";
+
+UpsertRequest upsert = new UpsertRequest
+{
+    Target = contact
+};
+UpsertResponse response = (UpsertResponse)service.Execute(upsert);
+bool created = response.RecordCreated; // true ise oluşturuldu, false ise güncellendi
+----
+
+Alternatif anahtar kullanılmadığında, `UpsertRequest` birincil anahtara (GUID) bakar. GUID verilmiş ve kayıt varsa günceller, yoksa hata verir. Bu nedenle, Upsert'in alternatif anahtar ile kullanılması daha tipiktir.
+
+== ExecuteMultipleRequest (Toplu İşlem)
+
+Birden çok bağımsız işlemi tek bir çağrıda göndermek için `ExecuteMultipleRequest` kullanılır. Bu, performansı artırır ve ağ gidiş-gelişini azaltır. Her alt istek bir `OrganizationRequest`'tir ve birbirinden bağımsız çalışır; birinin hatası diğerlerini etkilemez.
+
+[source,csharp]
+----
+ExecuteMultipleRequest multiple = new ExecuteMultipleRequest
+{
+    Settings = new ExecuteMultipleSettings
+    {
+        ContinueOnError = true,
+        ReturnResponses = true
+    },
+    Requests = new OrganizationRequestCollection()
+};
+
+// Birinci istek: Lead oluştur
+Entity lead1 = new Entity("lead");
+lead1["subject"] = "Toplu işlem lead 1";
+lead1["firstname"] = "Test";
+lead1["lastname"] = "Kullanıcı";
+CreateRequest create1 = new CreateRequest { Target = lead1 };
+multiple.Requests.Add(create1);
+
+// İkinci istek: Başka bir lead oluştur
+Entity lead2 = new Entity("lead");
+lead2["subject"] = "Toplu işlem lead 2";
+lead2["firstname"] = "Test2";
+lead2["lastname"] = "Kullanıcı2";
+CreateRequest create2 = new CreateRequest { Target = lead2 };
+multiple.Requests.Add(create2);
+
+ExecuteMultipleResponse multipleResponse = 
+    (ExecuteMultipleResponse)service.Execute(multiple);
+
+foreach (var responseItem in multipleResponse.Responses)
+{
+    if (responseItem.Response != null)
+    {
+        CreateResponse createResp = responseItem.Response as CreateResponse;
+        if (createResp != null)
+            Guid createdId = createResp.id;
+    }
+    else if (responseItem.Fault != null)
+    {
+        string error = responseItem.Fault.Message;
+    }
+}
+----
+
+Bu yöntem, toplu veri yükleme, dış sistem entegrasyonları veya çok sayıda ilgili kayıt oluşturma senaryolarında kullanılır.
+
+== Sonuç
+
+`IOrganizationService`, plugin'den Dataverse ile etkileşimin ana kapısıdır. Oluşturma, okuma, güncelleme, silme, upsert ve toplu işlem yöntemleriyle tüm veri işleme ihtiyaçlarını karşılar. Servis, plugin'in iş mantığını sadece tetikleyen kayıtla sınırlı kalmaktan çıkarır; diğer tablolara ve hatta diğer Dataverse mesajlarına erişim imkanı verir. Bir sonraki yazıda, daha karmaşık sorgu senaryoları için `QueryExpression` ve `FetchXML` konuları ele alınacaktır.

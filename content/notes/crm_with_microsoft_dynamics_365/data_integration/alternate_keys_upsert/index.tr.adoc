@@ -1,0 +1,129 @@
+---
+title: "Alternatif Anahtarlar ve Upsert"
+date: "2026-05-16T13:18:18+03:00"
+draft: false
+weight: 2
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Dış bir sistemden Dataverse'e veri aktarırken karşılaşılan temel sorunlardan biri, gelen kaydın Dataverse'te zaten var olup olmadığını bilmektir. Kayıt varsa güncellenmeli, yoksa oluşturulmalıdır. Ancak dış sistem, Dataverse'in atadığı GUID'i bilmez. Kendi birincil anahtarıyla (örneğin müşteri kodu, vergi numarası, sipariş numarası) çalışır. Dataverse, bu senaryoyu alternatif anahtarlar ve upsert işlemiyle çözer. Bu yazıda, alternatif anahtarların ne olduğu, nasıl tanımlanacağı ve upsert işlemlerinin Web API, Organization Service ve Power Automate ile nasıl yapılacağı ele alınmaktadır.
+
+== Alternatif Anahtar Nedir?
+
+Alternatif anahtar (alternate key), bir tablodaki bir veya birden fazla alanın birleşiminden oluşan ve kayıtları tekil olarak tanımlayan ikincil bir anahtardır. Her tablonun zaten bir birincil anahtarı (GUID) vardır; ancak bu GUID dış sistemler tarafından bilinmez. Alternatif anahtar, dış sistemin kullandığı doğal anahtarı Dataverse'e tanıtır.
+
+Örneğin dış bir ERP sistemi, müşterilerini `MUSTERI001` gibi bir kodla tanımlar. Dataverse'teki Account tablosunda bu kod için `accountnumber` alanı bulunur. Bu alan alternatif anahtar olarak tanımlandığında, dış sistem `MUSTERI001` kodunu kullanarak kaydı sorgulayabilir, güncelleyebilir veya upsert yapabilir.
+
+Alternatif anahtar, yalnızca tek bir alandan oluşmak zorunda değildir. Birden fazla alanın birleşimi de bir alternatif anahtar oluşturabilir. Örneğin bir sipariş kalemi, sipariş numarası ve ürün kodu birleşimiyle tekil olarak tanımlanabilir.
+
+== Alternatif Anahtar Tanımlama
+
+Alternatif anahtar, Maker Portal'da ilgili tablonun "Keys" (Anahtarlar) sekmesinden tanımlanır. Yeni bir anahtar oluşturmak için "Add Key" seçeneği kullanılır. Açılan panelde anahtarın görünen adı ve anahtarı oluşturacak alanlar seçilir. Birden fazla alan seçildiğinde, bu alanların birleşimi benzersizliği sağlar.
+
+Web API üzerinden alternatif anahtar tanımlamak da mümkündür. Aşağıdaki istek, Account tablosunda `accountnumber` alanı üzerinde bir alternatif anahtar oluşturur:
+
+[source,http]
+----
+POST /api/data/v9.2/EntityDefinitions(LogicalName='account')/Keys HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+    "SchemaName": "crmserisi_AccountNumberKey",
+    "KeyAttributes": [
+        "accountnumber"
+    ]
+}
+----
+
+Bir alternatif anahtar oluşturulduktan sonra, Dataverse bu anahtarın değerlerini indekslemeye başlar. İndeksleme işlemi, tablodaki mevcut kayıt sayısına bağlı olarak birkaç dakika sürebilir. İndeksleme tamamlanana kadar anahtar kullanılamaz.
+
+Alternatif anahtarın sınırları şunlardır. Her tablo için en fazla 5 alternatif anahtar tanımlanabilir. Bir anahtar en fazla 16 alan içerebilir. Anahtarı oluşturan alanların hiçbiri `null` değer alamaz; alternatif anahtar tanımlandığı andan itibaren bu alanlar zorunlu hale gelir.
+
+== Upsert
+
+Upsert, bir kaydın var olup olmadığını kontrol edip, varsa güncelleyen, yoksa oluşturan birleşik bir işlemdir. Dataverse'te upsert, alternatif anahtar veya birincil anahtar (GUID) ile yapılabilir.
+
+Dış sistem entegrasyonlarında tipik senaryo şudur: Dış sistem, kendi birincil anahtar değerini (örneğin müşteri kodu) içeren bir veri gönderir. Dataverse, bu değeri alternatif anahtar olarak kullanarak kaydı arar. Kayıt varsa günceller, yoksa oluşturur. Bu, entegrasyon mantığını büyük ölçüde basitleştirir; çünkü artık "önce sorgula, sonra karar ver" adımına gerek kalmaz.
+
+== Web API ile Upsert
+
+Web API'de upsert, PATCH fiili ve `If-None-Match: *` başlığıyla yapılır. Alternatif anahtar kullanarak kayıt aramak için, tablo koleksiyonunun parantez içinde alternatif anahtar alanı ve değeri belirtilir.
+
+Aşağıdaki örnek, `accountnumber` alternatif anahtarıyla bir hesabı arar ve upsert yapar:
+
+[source,http]
+----
+PATCH /api/data/v9.2/accounts(accountnumber='CONTOSO-001') HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Content-Type: application/json
+If-None-Match: *
+
+{
+    "name": "Contoso Ltd.",
+    "address1_city": "İstanbul",
+    "telephone1": "+90 212 555 1234"
+}
+----
+
+`If-None-Match: *` başlığı, "eşleşen kayıt yoksa oluştur" anlamına gelir. Kayıt varsa, gövdedeki alanlarla güncellenir. Kayıt yoksa, gövdedeki alanlarla ve alternatif anahtar değeriyle yeni bir kayıt oluşturulur.
+
+Birden fazla alandan oluşan bir alternatif anahtarla upsert yapmak için, alanlar virgülle ayrılır:
+
+[source,http]
+----
+PATCH /api/data/v9.2/crmserisi_orderitems(ordernumber='ORD-001',productcode='PRD-42') HTTP/1.1
+----
+
+Upsert işleminin başarılı yanıtı `204 No Content` veya `201 Created` olabilir. Kayıt oluşturulduysa `201`, güncellendiyse `204` döner. Yanıtın `OData-EntityId` başlığı, kaydın GUID'ini içerir.
+
+== Organization Service ile Upsert
+
+Organization Service'te upsert, `UpsertRequest` sınıfıyla yapılır. `Target` olarak verilen `Entity` nesnesi, alternatif anahtar alanını taşımalıdır.
+
+[source,csharp]
+----
+Entity account = new Entity("account");
+account["name"] = "Contoso Ltd.";
+account["address1_city"] = "İstanbul";
+account["accountnumber"] = "CONTOSO-001"; // Alternatif anahtar alanı
+
+UpsertRequest upsert = new UpsertRequest
+{
+    Target = account
+};
+
+UpsertResponse response = (UpsertResponse)service.Execute(upsert);
+bool created = response.RecordCreated; // true: oluşturuldu, false: güncellendi
+Guid id = response.Target.Id;
+----
+
+`UpsertRequest`, hedef entity'deki alternatif anahtar alanını kullanarak kaydı arar. Birden fazla alternatif anahtar varsa ve entity'de birden fazlası doluysa, Dataverse öncelik sırasına göre birini seçer. Bu nedenle, upsert yaparken yalnızca kullanmak istediğiniz alternatif anahtar alanlarını doldurmak daha sağlıklıdır.
+
+Eğer entity'de bir GUID (`Id`) belirtilmişse, upsert önce GUID'e göre arama yapar. GUID'li kayıt varsa günceller, yoksa `RecordCreated` true döner ve yeni kayıt belirtilen GUID ile oluşturulur. Bu, dış sistemin kendi GUID'lerini Dataverse'e taşımak istediği senaryolarda kullanışlıdır.
+
+== Power Automate ile Upsert
+
+Power Automate'te upsert, Dataverse bağlayıcısının "Upsert a row" eylemiyle yapılır. Bu eylem, bir tablo adı ve alternatif anahtar tanımı alır. Alternatif anahtar alanına eşleşecek değer ve diğer alanlar dinamik içerikle doldurulur.
+
+Eylem yapılandırılırken "Row ID" alanı boş bırakılırsa, alternatif anahtarla upsert yapılır. "Row ID" doldurulursa, GUID ile upsert yapılır. Power Automate, eylemin sonucunda kaydın GUID'ini ve oluşturulup oluşturulmadığını döndürür.
+
+== Çakışma Yönetimi
+
+Alternatif anahtar değerinin değişmesi durumunda, eski değerle yapılan bir upsert isteği yeni bir kayıt oluşturur. Çünkü Dataverse, yeni değeri taşıyan bir kayıt bulamaz. Bu, aynı gerçek dünya varlığı için iki ayrı Dataverse kaydı oluşmasına yol açabilir.
+
+Bu tür çakışmaları önlemek için, entegrasyon tarafında alternatif anahtar değerinin değişmesi durumunda, önce eski değerle kaydı bulup GUID'ini almak, ardından bu GUID ile güncelleme yapmak daha güvenlidir.
+
+İki farklı dış sistemden gelen aynı alternatif anahtar değerine sahip kayıtlar ise doğal olarak aynı Dataverse kaydını günceller. Bu, son yazan kazanır (last writer wins) davranışıdır. Hangi sistemin değişikliğinin geçerli olacağı, entegrasyon sıklığına ve sıralamasına bağlıdır.
+
+== Sonuç
+
+Alternatif anahtarlar ve upsert, dış sistemlerle Dataverse arasında veri senkronizasyonunu basitleştiren iki tamamlayıcı özelliktir. Alternatif anahtar, dış sistemin doğal anahtarını Dataverse'e tanıtarak GUID bağımlılığını ortadan kaldırır. Upsert ise bu anahtarı kullanarak, kaydın var olup olmadığını ayrıca sorgulamadan, tek bir çağrıyla oluşturma veya güncelleme yapmayı sağlar. Bu ikili, özellikle toplu veri içe aktarma, gerçek zamanlı entegrasyon ve mobil uygulama senkronizasyonu gibi senaryolarda hem kod karmaşıklığını azaltır hem de performansı artırır. Bir sonraki yazıda, dış sistemlerle veri senkronizasyonunun genel mimarisi ve en iyi uygulamaları ele alınacaktır.

@@ -1,0 +1,66 @@
+---
+title: "Power Automate ile Otomasyon"
+date: "2026-05-16T09:31:04+03:00"
+draft: false
+weight: 2
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+
+== Giriş
+
+İş kuralları ve iş süreç akışları, kullanıcının form üzerindeki anlık etkileşimlerini yönlendirir. Ancak bir CRM sisteminde kullanıcı arayüzünden bağımsız olarak çalışması gereken pek çok otomasyon ihtiyacı vardır. Bir kayıt oluşturulduğunda e-posta göndermek, belirli bir tarihte görev oluşturmak, iki sistem arasında veri taşımak veya bir onay süreci başlatmak, arka planda tetiklenen akışlarla mümkün olur. Power Automate, bu tür senaryoları kod yazmadan hayata geçirmek için kullanılan bulut tabanlı bir otomasyon aracıdır. Bu yazıda Power Automate'in yapısı, akış türleri, tetikleyici ve eylem kavramları, Dynamics 365 bağlayıcısı ve ilk akışın oluşturulması ele alınmaktadır.
+
+== Power Automate
+
+Power Automate, Microsoft Power Platform'un otomasyon bileşenidir. Temel işlevi, bir olay gerçekleştiğinde önceden tanımlanmış adımları sırayla veya paralel olarak çalıştırmaktır. Olay bir Dataverse kaydının oluşturulması, bir e-postanın gelmesi, bir formun doldurulması veya belirli bir takvim anı olabilir. Adımlar ise veri okuma, kayıt güncelleme, e-posta gönderme, onay isteme ve dış servislere çağrı yapma gibi işlemlerdir.
+
+Power Automate, yüzlerce bağlayıcı (connector) aracılığıyla farklı servislerle konuşur. Dynamics 365, Dataverse, SharePoint, Outlook, Teams, Twitter, SQL Server ve daha birçok servis için hazır bağlayıcılar bulunur. Bağlayıcı, Power Automate'in o servise erişmesini sağlayan bir kimlik doğrulama ve API sarmalayıcısıdır.
+
+== Bulut Akışı Türleri
+
+Power Automate, üç tür bulut akışı sunar. Her biri farklı bir tetiklenme biçimine karşılık gelir.
+
+Otomatik akış, bir olay tarafından tetiklenir. Dataverse'te bir kayıt oluşturulduğunda, bir e-posta geldiğinde veya bir dosya değiştirildiğinde başlar. En sık kullanılan akış türüdür ve insan müdahalesi olmadan çalışır.
+
+Anlık akış, kullanıcı tarafından elle tetiklenir. Bir düğmeye tıklamak, Power Apps içinden bir çağrı yapmak veya bir akışı paylaşılan bir bağlantıyla başlatmak bu türün örnekleridir. Anlık akışlar, kullanıcının ihtiyaç anında başlattığı işlemler için uygundur.
+
+Zamanlanmış akış, belirli bir saatte veya periyodik olarak çalışır. Her sabah rapor oluşturmak, haftalık veri temizliği yapmak veya belirli aralıklarla sistemler arası senkronizasyon çalıştırmak için kullanılır.
+
+== Tetikleyiciler ve Eylemler
+
+Her akış, tetikleyici (trigger) ile başlar ve eylemlerle (action) devam eder. Tetikleyici, akışı başlatan olaydır. Örneğin "Dataverse'te bir satır eklendiğinde, değiştirildiğinde veya silindiğinde" tetikleyicisi, seçilen tablodaki her değişiklikte akışı başlatır. Tetikleyici, aynı zamanda akışa olayla ilgili bağlam bilgisini de taşır; hangi kaydın, kim tarafından, ne zaman değiştirildiği gibi veriler akışın geri kalanında kullanılabilir.
+
+Eylem, akışın bir adımda yaptığı işlemdir. Dataverse'te bir satır oluşturmak veya güncellemek, bir e-posta göndermek, bir onay başlatmak, bir değişken atamak veya bir koşulu değerlendirmek birer eylemdir. Eylemler sırayla veya paralel dallar halinde çalışabilir. Koşul (condition) eylemi, akışın gidişatını veriye göre dallandırmayı sağlar. Döngü (apply to each) eylemi ise bir liste üzerinde her bir öğe için aynı adımları tekrarlar.
+
+Eylemlerin ihtiyaç duyduğu veriler, dinamik içerik (dynamic content) penceresinden seçilir. Bu pencere, akışın önceki adımlarından gelen alanları listeleyerek bunları sonraki adımlara bağlamayı sağlar. Örneğin bir tetikleyiciden gelen Account Name alanı, bir e-posta eyleminin konu satırında kullanılabilir.
+
+== Dynamics 365 Bağlayıcısı
+
+Power Automate, Dataverse bağlayıcısı üzerinden Dynamics 365 ile entegre olur. Bu bağlayıcı, Dataverse tablolarına tam erişim sağlar. Tetikleyici olarak bir tablonun izlenmesi, eylem olarak ise tablolarda CRUD işlemleri yapılması mümkündür.
+
+Dynamics 365 ortamında yaygın kullanılan Dataverse tetikleyicileri şunlardır: bir satır eklendiğinde, değiştirildiğinde veya silindiğinde; bir iş süreç akışı aşaması değiştiğinde; bir kayıt paylaşıldığında veya sahipliği değiştiğinde. Bu tetikleyiciler, kullanıcı arayüzündeki değişikliklere anında tepki veren akışlar kurmayı sağlar.
+
+Dataverse eylemleri arasında en sık kullanılanlar şunlardır: yeni bir satır oluştur, bir satırı güncelle, bir satırı sil, bir satırı oku (tek kayıt getir), satırları listele (birden çok kayıt getir), bir işlemi bağla veya ilişkisini kaldır ve bir FetchXML sorgusu çalıştır.
+
+Dataverse bağlayıcısını kullanabilmek için, akışı oluşturan kullanıcının hedef ortamda yeterli güvenlik rolüne sahip olması gerekir. Akış, kullanıcının kimlik bilgileriyle çalışır; bu nedenle kullanıcının erişemediği bir kaydı akış da okuyamaz veya değiştiremez.
+
+== İlk Akış
+
+Dynamics 365 ile Power Automate entegrasyonunu somutlamak için tipik bir senaryo üzerinden ilerlenebilir. Yeni bir lead oluşturulduğunda, lead'in sahibine bildirim e-postası gönderen bir akış aşağıdaki adımlarla kurulur.
+
+Önce Maker Portal'da Akışlar bölümüne gidilir ve "Yeni akış" seçeneğinden "Otomatik bulut akışı" seçilir. Akışa bir ad verilir. Tetikleyici olarak "Dataverse bağlayıcısı" altından "Bir satır eklendiğinde, değiştirildiğinde veya silindiğinde" seçilir. Tetikleyici yapılandırmasında değişiklik türü "Oluşturuldu" olarak belirlenir, tablo adı "Leads" seçilir ve kapsam "Kuruluş" bırakılır.
+
+Ardından bir eylem eklenir. "Office 365 Outlook" bağlayıcısı altından "E-posta gönder" seçilir. Alıcı alanına dinamik içerikten "Sahip" (Owner) bilgisi eklenir. Konu alanına "Yeni bir lead atandı" yazılır ve ardından dinamik içerikten "Konu" (Topic) eklenir. Gövde alanına ise lead'in adı, şirketi ve oluşturulma tarihi gibi bilgiler eklenir.
+
+Akış kaydedilir ve test edilir. Dynamics 365 Sales uygulamasında yeni bir lead oluşturulduğunda, akış otomatik olarak tetiklenir ve lead'in sahibine bir e-posta ulaşır. Bu basit akış, aynı mantıkla fırsat değişiklikleri, vaka atamaları veya müşteri onay süreçleri için genişletilebilir.
+
+Akışın çalışma geçmişi, Power Automate portalındaki "Çalıştırma geçmişi" bölümünden izlenir. Burada her tetiklenme için başarılı, başarısız veya iptal durumu görülebilir. Başarısız çalıştırmalarda, hata mesajı ve hangi eylemde sorun olduğu detayıyla birlikte görüntülenir.
+
+== Sonuç
+
+Power Automate, Dynamics 365 ortamında kodsuz otomasyonun ana aracıdır. Otomatik, anlık ve zamanlanmış akış türleriyle farklı tetiklenme ihtiyaçlarını karşılar. Dataverse bağlayıcısı üzerinden kayıt değişikliklerine tepki verir ve CRUD işlemlerini yürütür. Koşullar, döngüler ve dinamik içerikle zenginleştirilen akışlar, rutin işleri insan müdahalesi olmadan yürüterek verimliliği artırır. Power Automate'in kodsuz sınırlarına ulaşıldığında ise devreye kodlu geliştirme girer. Bir sonraki yazıda, model-driven uygulama arayüzünün özelleştirilmesi —formlar ve görünümler— konusu ele alınacaktır.

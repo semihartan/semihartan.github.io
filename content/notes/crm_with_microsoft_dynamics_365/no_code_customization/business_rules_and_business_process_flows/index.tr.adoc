@@ -1,0 +1,43 @@
+---
+title: "İş Kuralları ve İş Süreci Akışları"
+date: "2026-05-15T23:00:53+03:00"
+draft: false
+weight: 1
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Dynamics 365, tekrar eden kontrolleri ve süreç yönlendirmelerini kod yazmadan yönetmek için iki temel araç sunar: iş kuralları ve iş süreç akışları. İş kuralları, form üzerindeki alanların davranışını belirli koşullara göre değiştirir; bir alanı zorunlu kılmak, gizlemek veya varsayılan değer atamak gibi işlemleri yerine getirir. İş süreç akışları ise kullanıcıyı adım adım ilerlemesi gereken bir süreç boyunca yönlendirir; satış aşamaları veya vaka çözüm adımları gibi çok adımlı işleri görsel bir ilerleme çubuğuyla takip eder. Bu yazıda her iki aracın yapısı, çalışma biçimi ve kullanım alanları ele alınmaktadır.
+
+== İş Kuralları
+
+İş kuralı, bir form üzerinde çalışan, koşul ve eylem çiftlerinden oluşan bir mantık zinciridir. Kullanıcı formda bir alanı değiştirdiğinde, kaydı kaydettiğinde veya formu açtığında tetiklenir. Her iş kuralı bir dizi koşul değerlendirir; koşul sağlandığında tanımlanan eylemleri uygular.
+
+İş kuralları iki kapsamda çalışabilir. İstemci tarafı (client-side) iş kuralları, form yüklendiğinde veya alan değeri değiştiğinde anında tepki verir. Kullanıcı bir açılır listeden belirli bir değeri seçtiğinde başka bir alanın görünür hale gelmesi, bu türün tipik örneğidir. Sunucu tarafı (server-side) iş kuralları ise kayıt kaydedilirken çalışır ve istemcide anlık tepki gerektirmeyen kontroller için uygundur. Bir iş kuralı aynı anda her iki kapsamda da çalışacak şekilde yapılandırılabilir.
+
+Bir iş kuralının içinde şu eylemler tanımlanabilir: alanı zorunlu kılma (Set Field Required), alanı gizleme (Hide Field), alanı kilitleme (Lock Field), alana varsayılan değer atama (Set Field Value), alanın değerini temizleme (Clear Field), hata mesajı gösterme (Show Error Message) ve öneri mesajı gösterme (Set Recommendation). Bu eylemler, kullanıcı deneyimini yönlendirmek ve veri giriş hatalarını azaltmak için kullanılır.
+
+İş kuralları, form tasarımcısı içindeki İş Kuralları panelinden oluşturulur. Bir koşul eklenir; örneğin "Lead Source alanı Webinar ise". Ardından bu koşula bağlı bir eylem tanımlanır; örneğin "Webinar Code alanını zorunlu yap". Koşul ve eylem zinciri, else-if dallarıyla genişletilebilir. Birden fazla koşul grubu aynı anda değerlendirilebilir. Kaydedilen iş kuralı, yayımlandıktan sonra ilgili formda aktif hale gelir.
+
+İş kurallarının bir sınırı, yalnızca form bağlamında çalışmalarıdır. Toplu veri içe aktarma, API çağrıları veya arka plan işlemleri sırasında iş kuralları tetiklenmez. Bu tür senaryolarda kontrollerin plugin veya Power Automate akışlarıyla sağlanması gerekir.
+
+== İş Süreç Akışları
+
+İş süreç akışı (business process flow - BPF), kullanıcıyı önceden tanımlanmış aşamalardan geçiren görsel bir kılavuzdur. Formun üst kısmında yatay bir ilerleme çubuğu olarak görünür. Her aşama, tamamlanması gereken bir dizi adım içerir. Kullanıcı adımları tamamladıkça bir sonraki aşamaya ilerler. BPF, kullanıcıya hem nerede olduğunu hem de bir sonraki adımda ne yapması gerektiğini gösterir.
+
+Bir BPF, aşamalardan (stage) ve her aşamanın altındaki adımlardan (step) oluşur. Aşama, sürecin mantıksal bir bölümüdür; örneğin "Niteliklendirme", "Teklif Hazırlama", "Sözleşme" gibi. Adım ise o aşamada tamamlanması beklenen bir veri girişidir; örneğin "Tahmini Kapanış Tarihi", "Bütçe Onayı" gibi. Her adım, formdaki bir alana bağlanır. Kullanıcı o alanı doldurduğunda adım tamamlanmış sayılır.
+
+BPF, belirli bir tabloya bağlı olarak tanımlanır. Opportunity, Lead veya Case gibi birincil bir tablo seçilir ve süreç bu tablonun formu üzerinde çalışır. BPF ilerledikçe, tablodaki ilgili aşama alanı otomatik olarak güncellenir. Bu sayede raporlamalarda kayıtların hangi aşamada olduğu sorgulanabilir.
+
+Aynı tablo için birden fazla BPF tanımlanabilir. Örneğin satış ekibi hem doğrudan satış hem de bayi kanalı için farklı süreçler izleyebilir. Kullanıcı yeni bir kayıt oluştururken hangi BPF'yi kullanacağını seçer veya sistem, kayıttaki bir alanın değerine göre uygun BPF'yi otomatik olarak başlatır. BPF'ler arasında geçiş yapmak mümkündür; ancak bu geçiş dikkatli yönetilmelidir, çünkü aşamalar arası uyumsuzluk olabilir.
+
+BPF'ler, iş kurallarıyla birlikte çalışabilir. Bir aşama tamamlandığında bir iş kuralı tetiklenemez; ancak bir iş kuralı, BPF'nin gösterdiği bir alanı zorunlu kılarak sürecin ilerlemesini dolaylı olarak yönlendirebilir. BPF'nin asıl tamamlayıcısı ise Power Automate'tir. Bir aşama tamamlandığında veya süreç sonlandığında otomatik olarak e-posta göndermek, görev oluşturmak veya başka bir sisteme veri iletmek için BPF, Power Automate ile entegre edilebilir.
+
+== Sonuç
+
+İş kuralları ve iş süreç akışları, kod yazmadan form davranışını kontrol etmenin ve kullanıcıyı çok adımlı süreçlerde yönlendirmenin araçlarıdır. İş kuralları anlık alan kontrolleri ve görünürlük yönetimi sağlar; BPF ise kullanıcıya bir yol haritası sunarak iş sürecinin eksiksiz yürütülmesini garanti eder. Her ikisi de kodsuz özelleştirme katmanının temel bileşenleridir. Bir sonraki yazıda, bu araçları tamamlayan bir başka kodsuz yetenek olan Power Automate ile otomasyon konusu ele alınacaktır.

@@ -1,0 +1,63 @@
+---
+title: "Microsoft Dynamics 365'e Giriş"
+date: "2026-05-14T13:35:48+03:00"
+draft: false
+weight: 1
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Önceki bölümlerde CRM'i platform bağımsız bir perspektiften ele aldık. Müşteri ilişkilerinin nasıl yönetildiğini, temel kavramları ve veri modelini inceledik. Bu noktadan itibaren odak değişiyor: artık belirli bir platform üzerinde çalışacağız. Bu platform Microsoft Dynamics 365'tir.
+
+Dynamics 365, Microsoft'un kurumsal iş uygulamaları ailesidir. Satış, müşteri hizmetleri, pazarlama, saha hizmetleri, finans ve operasyon gibi farklı iş alanlarını kapsayan modüllerden oluşur. Her modül bağımsız olarak kullanılabilir; ancak hepsi ortak bir altyapı üzerinde çalışır ve birbirleriyle entegre çalışacak şekilde tasarlanmıştır. Bu ortak altyapı, Dynamics 365'i rakiplerinden ayıran en temel özelliklerden biridir: farklı iş süreçlerini yöneten modüller aynı veri tabanını, aynı güvenlik modelini ve aynı geliştirici araçlarını paylaşır.
+
+== Tarihçe
+
+Dynamics 365, Microsoft'un daha önce ayrı ürünler olarak sunduğu iki büyük platformun birleşiminden doğmuştur: CRM tarafında Microsoft Dynamics CRM, ERP tarafında ise Microsoft Dynamics AX, NAV ve GP. Microsoft 2016 yılında bu ürünleri tek bir çatı altında toplayarak Dynamics 365 adıyla yeniden konumlandırdı.
+
+Bu birleşim yalnızca bir marka değişikliği değildi. Ürünlerin ortak bir bulut altyapısına — Azure'a — taşınması, ortak bir veri katmanı olan Dataverse üzerinde çalışmaya başlaması ve Power Platform ile derin bir entegrasyon kurması anlamına geliyordu. Dynamics 365, bu dönüşümle birlikte yalnızca bir CRM veya ERP çözümü olmaktan çıkıp kapsamlı bir kurumsal uygulama platformuna dönüştü.
+
+Microsoft Dynamics CRM'in kökenleri 2003 yılına dayanır. O dönemde Salesforce ile rekabet etmek amacıyla piyasaya sürülen bu ürün, başlangıçta yalnızca satış ve müşteri hizmetleri süreçlerini kapsıyordu. Sonraki yıllarda pazarlama modülü eklendi, on-premise kurulum seçeneği genişletildi ve 2011 yılında bulut sürümü olan Dynamics CRM Online hayata geçirildi. 2016'daki Dynamics 365 dönüşümüne kadar geçen süreçte ürün, kurumsal CRM pazarında köklü bir yer edindi. Bu tarihsel birikim, bugün Dynamics 365'in veri modelinde ve iş süreçlerinde hâlâ hissedilmektedir.
+
+== Modüller
+
+Dynamics 365 tek bir ürün değil, birbirleriyle entegre çalışan modüllerin toplamıdır. Bu modüller iki ana kategoride değerlendirilebilir.
+
+=== Müşteri Etkileşimi Uygulamaları
+
+Müşteri etkileşimi uygulamaları — Customer Engagement olarak da bilinir — CRM odaklı modülleri kapsar ve Dataverse üzerine inşa edilmiştir. Bu serinin odak noktasını bu kategori oluşturmaktadır.
+
+*Dynamics 365 Sales*, satış süreçlerini uçtan uca yönetir. Lead yönetimi, fırsat takibi, teklif ve sipariş süreçleri, satış tahmini ve ekip performansı bu modülün temel işlevleridir. Yapay zekâ destekli özellikler — konuşma analizi, ilişki sağlığı skoru, bir sonraki en iyi aksiyon önerileri — son yıllarda modüle entegre edilmiştir.
+
+*Dynamics 365 Customer Service*, müşteri hizmetleri süreçlerini yönetir. Vaka yönetimi, SLA takibi, bilgi bankası, çok kanallı destek ve self-servis portal bu modülün başlıca bileşenleridir. Omnichannel for Customer Service eklentisiyle telefon, e-posta, sohbet ve sosyal medya kanalları tek bir arayüzden yönetilebilir.
+
+*Dynamics 365 Field Service*, saha operasyonlarını yönetir. Teknisyen çizelgeleme, iş emri yönetimi, envanter takibi ve müşteri lokasyonunda gerçekleştirilen hizmet süreçleri bu modülün kapsamındadır. Kaynak zamanlama optimizasyonu için yapay zekâ tabanlı bir motor içerir.
+
+*Dynamics 365 Customer Insights*, müşteri verilerini birleştirip analiz etmeye odaklanır. Farklı kaynaklardan gelen müşteri verilerini tek bir profilde toplar, segmentasyon yapar ve pazarlama kampanyalarını yönetir. Önceden ayrı iki ürün olan Customer Insights ve Marketing modülleri bu çatı altında birleştirilmiştir.
+
+=== Finans ve Operasyon Uygulamaları
+
+Finans ve operasyon uygulamaları ERP odaklı modülleri kapsar. Bu uygulamalar Customer Engagement uygulamalarından farklı bir teknik altyapı üzerinde çalışır ve bu serinin kapsamı dışındadır. Bununla birlikte, kurumsal ortamlarda bu iki kategori sıklıkla bir arada kullanılır; dolayısıyla varlığından haberdar olmak gerekir.
+
+*Dynamics 365 Finance*, muhasebe, bütçeleme, vergi yönetimi ve finansal raporlama süreçlerini kapsar. *Dynamics 365 Supply Chain Management*, üretim, depo yönetimi ve tedarik zinciri süreçlerini yönetir. *Dynamics 365 Business Central* ise küçük ve orta ölçekli işletmelere yönelik, finans ve operasyon işlevlerini bir arada sunan daha kompakt bir ERP çözümüdür.
+
+== Dynamics 365 ve CRM
+
+Dynamics 365'in CRM tarafı, önceki bölümlerde platform bağımsız olarak ele aldığımız kavramların somut bir karşılığıdır. Lead, Contact, Account, Opportunity, Case gibi yapılar Dynamics 365'te birinci sınıf nesneler olarak yerleşik biçimde gelir. Satış süreci, müşteri hizmetleri akışları ve pazarlama kampanyaları bu nesneler üzerine inşa edilir.
+
+Bir geliştirici olarak bu yapıyla iki farklı düzeyde etkileşime girilir. Birinci düzey konfigürasyon ve özelleştirmedir: mevcut nesnelere yeni alanlar eklemek, formları düzenlemek, iş kuralları tanımlamak. İkinci düzey ise kod geliştirmedir: plugin yazmak, özel API'lar oluşturmak, dış sistemlerle entegrasyon kurmak. Bu serinin ağırlıklı odağı ikinci düzeydedir; ancak ilk düzeyi anlamadan ikincisine geçmek doğru olmaz.
+
+Dynamics 365'in rakiplerine kıyasla öne çıkan yönlerinden biri, Microsoft ekosistemiyle olan derin entegrasyonudur. Azure Active Directory ile kimlik yönetimi, Teams ile iletişim, Outlook ile e-posta ve takvim senkronizasyonu, Power BI ile raporlama ve Excel ile veri aktarımı — bunların hepsi ek bir entegrasyon katmanı gerektirmeksizin çalışır. Kurumsal ortamlarda bu entegrasyonlar ciddi bir operasyonel kolaylık sağlar.
+
+== Lisanslama
+
+Dynamics 365 modülleri ayrı ayrı lisanslanır. Her modülün kendi lisans modeli vardır ve fiyatlandırma kullanıcı başına aylık olarak belirlenir. Lisanslama ayrıntıları bu serinin kapsamı dışında olmakla birlikte, bir geliştirici olarak bilinmesi gereken temel nokta şudur: hangi modülün lisanslandığı, ortamda hangi tabloların ve özelliklerin kullanılabilir olduğunu doğrudan etkiler.
+
+== Değerlendirme
+
+Dynamics 365, onlarca yıllık kurumsal yazılım deneyiminin bulut çağına taşınmış halidir. CRM tarafında güçlü bir veri modeli, yerleşik iş süreçleri ve kapsamlı bir geliştirici altyapısı sunar. Sonraki yazıda bu altyapının temelini oluşturan üç katmanı — Dynamics 365, Power Platform ve Dataverse — ve aralarındaki ilişkiyi ele alacağız.

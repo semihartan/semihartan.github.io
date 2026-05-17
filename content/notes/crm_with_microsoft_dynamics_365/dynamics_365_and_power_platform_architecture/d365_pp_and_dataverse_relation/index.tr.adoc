@@ -1,0 +1,69 @@
+---
+title: "Dynamics 365, Power Platform ve Dataverse ilişkisi"
+date: "2026-05-15T19:27:17+03:00"
+draft: false
+weight: 2
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Dynamics 365'i bir bina olarak düşünürsek, Sales, Customer Service ve Field Service gibi modüller binanın katlarıdır. Power Platform bu binanın taşıyıcı iskeletini, Dataverse ise temelini oluşturur. Bir geliştirici olarak yalnızca katlarla ilgilenmek mümkün değildir; çünkü her özelleştirme, her plugin, her entegrasyon bu iskelet ve temel üzerinde çalışır. Bu yazıda bu üç katmanın ne olduğunu ve birbirleriyle nasıl ilişkilendiğini inceliyoruz.
+
+== Power Platform
+
+Power Platform, Microsoft'un düşük kod ve kodsuz uygulama geliştirme platformudur. Dört ana bileşenden oluşur: Power Apps, Power Automate, Power BI ve Power Virtual Agents.
+
+*Power Apps*, kod yazmadan veya az kodla uygulama geliştirmeye olanak tanır. İki farklı uygulama türü sunar: canvas app ve model-driven app. Canvas app'ler tamamen özel arayüzler oluşturmak için kullanılır; geliştiriciye piksel düzeyinde kontrol sağlar. Model-driven app'ler ise Dataverse'teki veri modeline dayanarak otomatik olarak oluşturulur. Dynamics 365'in Sales, Customer Service gibi modülleri aslında birer model-driven app'tir. Yani Dynamics 365 modülleri, Power Apps altyapısı üzerine inşa edilmiş uygulamalardır.
+
+*Power Automate*, iş süreçlerini otomatikleştirmek için kullanılır. Tetikleyici ve eylem mantığına dayanan akışlar oluşturulur. Dynamics 365 ile birlikte kullanıldığında bir kayıt oluşturulduğunda, güncellendiğinde veya silindiğinde otomatik olarak akış tetiklenebilir. Kod gerektirmeyen otomasyon senaryoları için plugin yazmak yerine Power Automate tercih edilebilir.
+
+*Power BI*, veri görselleştirme ve raporlama aracıdır. Dynamics 365 verileri doğrudan Power BI'a bağlanabilir; satış performansı, müşteri hizmetleri metrikleri ve pipeline analizleri gibi raporlar oluşturulabilir.
+
+*Power Virtual Agents*, kodsuz chatbot geliştirme aracıdır. Dynamics 365 Customer Service ile entegre çalışarak müşteri taleplerinin bir kısmını otomatik olarak karşılayabilir.
+
+Dynamics 365, Power Platform'un bir parçası değildir; ancak Power Platform üzerine inşa edilmiştir. Bu ayrım önemlidir. Power Platform bağımsız olarak kullanılabilir — Dynamics 365 lisansı olmadan da Power Apps veya Power Automate kullanmak mümkündür. Ancak Dynamics 365 her zaman Power Platform'a ihtiyaç duyar.
+
+== Dataverse
+
+Dataverse, Power Platform'un veri katmanıdır. Tüm Dynamics 365 verilerinin saklandığı, ilişkilendirildiği ve yönetildiği yerdir. Teknik olarak bakıldığında Dataverse, ilişkisel bir veritabanının çok ötesine geçen bir platformdur.
+
+=== Tablolar ve Sütunlar
+
+Dataverse'te veriler tablolar halinde organize edilir. Her tablo bir iş nesnesini temsil eder. Account, Contact, Lead, Opportunity gibi Dynamics 365'e özgü tablolar Dataverse'te yerleşik olarak gelir. Bunların yanı sıra ihtiyaca göre özel tablolar oluşturulabilir.
+
+Her tablonun sütunları vardır. Sütunlar metin, sayı, tarih, seçenek listesi, arama gibi farklı veri türlerini destekler. Bir tabloya yeni sütun eklendiğinde bu sütun anında tüm platform tarafından — API, form, görünüm, plugin — kullanılabilir hale gelir.
+
+=== İlişkiler
+
+Tablolar arasında ilişkiler tanımlanabilir. Bir Contact birden fazla Account'a bağlı olamaz — bu bire-çok ilişkisinin klasik bir örneğidir. Bir Opportunity hem bir Account'a hem de birden fazla Contact'a bağlanabilir. Bu ilişkiler Dataverse düzeyinde tanımlanır ve tüm platform bu tanımları otomatik olarak uygular.
+
+=== Yerleşik API
+
+Dataverse'te tanımlanan her tablo ve sütun otomatik olarak bir REST API üzerinden erişilebilir hale gelir. Bu API OData standardını takip eder ve Web API olarak adlandırılır. Dış sistemler Dynamics 365 verisine bu API üzerinden erişir. Özel bir tablo oluşturulduğunda bile o tablo için ayrıca bir API endpoint yazmak gerekmez; Dataverse bunu otomatik olarak sağlar.
+
+=== Güvenlik Modeli
+
+Dataverse'in yerleşik güvenlik modeli oldukça kapsamlıdır. Satır bazında, sütun bazında ve tablo bazında erişim kontrolü tanımlanabilir. Bir kullanıcının hangi kayıtları görebileceği, hangilerini düzenleyebileceği ve hangilerini silebileceği güvenlik rolleri aracılığıyla yönetilir. Bu modelin tüm ayrıntıları ilerleyen yazılarda ele alınacaktır.
+
+=== Olay Altyapısı
+
+Dataverse, veri üzerinde gerçekleşen her işlemi — oluşturma, güncelleme, silme, ilişkilendirme — bir olay olarak yayımlar. Plugin'ler bu olaylara abone olarak çalışır. Bir Contact kaydı güncellendiğinde tetiklenmesini istediğiniz bir iş mantığı varsa bunu bir plugin olarak Dataverse'e kaydedersiniz. Dataverse o olay gerçekleştiğinde plugin'i otomatik olarak çağırır. Bu altyapı, serinin ilerleyen bölümlerinde plugin geliştirmenin temelini oluşturacaktır.
+
+== Üç Katmanın İlişkisi
+
+Bu noktaya kadar üç katmanı ayrı ayrı ele aldık. Şimdi bunların birbirleriyle nasıl ilişkilendiğine bakalım.
+
+Dataverse en altta yer alır. Veriyi saklar, ilişkileri yönetir, güvenliği uygular ve olayları yayımlar. Power Platform bu veri katmanının üzerine inşa edilmiştir. Power Apps, Dataverse'teki tablolara dayanarak uygulama arayüzleri oluşturur. Power Automate, Dataverse olaylarını tetikleyici olarak kullanır. Dynamics 365 ise Power Platform'un üzerinde çalışan, Dataverse'i veri katmanı olarak kullanan kurumsal uygulamalar topluluğudur.
+
+Bu ilişkiyi somutlaştırmak için bir örnek verelim. Dynamics 365 Sales'te bir Opportunity kaydı oluşturulduğunda ne olur? Kullanıcı arayüzü bir Power Apps model-driven app'tir. Kayıt Dataverse'te Account tablosuna yazılır. Eğer bu olaya bağlı bir plugin varsa Dataverse onu tetikler. Eğer bir Power Automate akışı yapılandırılmışsa o da devreye girer. Tüm bu katmanlar arka arkaya çalışır; kullanıcı yalnızca bir kayıt oluşturduğunu görür.
+
+Bir geliştirici olarak bu katmanların farkında olmak, doğru aracı doğru senaryoda kullanmayı sağlar. Basit bir otomasyon için Power Automate yeterlidir. Karmaşık iş mantığı için plugin gerekir. Dış sistemlere veri açmak için Web API kullanılır. Hangi katmanda ne yapılabileceğini bilmek, gereksiz kod yazmaktan da kaçınmayı sağlar.
+
+== Değerlendirme
+
+Dynamics 365, Power Platform ve Dataverse birbirinden bağımsız ürünler değildir. Birlikte bir bütün oluştururlar: Dataverse veriyi yönetir, Power Platform uygulama ve otomasyon katmanını sağlar, Dynamics 365 ise bu altyapının üzerinde çalışan kurumsal iş uygulamalarını sunar. Bu ilişkiyi kavramak, ilerleyen yazılarda plugin geliştirme, özelleştirme ve entegrasyon konularını çok daha sağlam bir zeminde anlamayı mümkün kılar. Sonraki yazıda bu altyapının veri boyutunu derinlemesine ele alacağız: Dataverse veri modeli, tablo türleri, ilişkiler ve özelleştirme seçenekleri.

@@ -1,0 +1,118 @@
+---
+title: "Pre/Post Entity Images"
+date: "2026-05-16T13:18:10+03:00"
+draft: false
+weight: 6
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Context nesnesini ele aldığımız yazıda, `PreEntityImages` ve `PostEntityImages` koleksiyonlarından kısaca söz etmiştik. Bu iki koleksiyon, plugin'in tetiklendiği anda kaydın değişim öncesi ve sonrası tam görüntülerine erişmesini sağlar. Target'ın yalnızca değişen alanları taşıdığı Update senaryolarında, değişmeyen alanların değerine ulaşmanın tek yolu bu görüntülerdir. Bu yazıda, entity image'lerin ne olduğu, neden gerekli oldukları, nasıl kaydedilecekleri ve hangi aşamalarda kullanılabilecekleri ayrıntılı olarak incelenmektedir.
+
+== Entity Image Nedir?
+
+Entity image, bir kaydın belirli bir andaki tam veya kısmi anlık görüntüsüdür. Plugin execution pipeline'ında iki tür image bulunur. Pre image, işlem başlamadan hemen önceki kaydın halidir. Post image ise işlem tamamlandıktan hemen sonraki halidir. Her ikisi de `Entity` tipindedir ve kaydın alanlarına tıpkı bir Retrieve işleminden dönen kayıt gibi erişim sağlar.
+
+Image'ler, Plugin Registration Tool'da step kaydedilirken tanımlanır. Her image için bir takma ad (alias) belirlenir ve image'in hangi alanları içereceği seçilir. Tüm alanlar seçilebileceği gibi, yalnızca ihtiyaç duyulan alanlar da belirtilebilir.
+
+== Neden Image Kullanılır?
+
+Image kullanımını zorunlu kılan temel neden, Update mesajındaki Target davranışıdır. Bir kayıt güncellendiğinde, Target yalnızca değişen alanları taşır. Değişmeyen alanlar Target'ta bulunmaz. Eğer plugin, bir alanın değişip değişmediğine bakmaksızın o alanın değerine ihtiyaç duyuyorsa, Target yetersiz kalır.
+
+Örnek olarak, bir fırsatın tahmini kapanış tarihi değiştiğinde, fırsatın ait olduğu müşteri hesabını kontrol etmek isteyen bir plugin düşünelim. Target yalnızca `estimatedclosedate` alanını içerir; `parentaccountid` alanı Target'ta yoktur. Plugin'in müşteri hesabını öğrenebilmesi için Pre image kullanması gerekir.
+
+Bir diğer neden, karşılaştırma yapmaktır. Bir alanın eski ve yeni değerini karşılaştırarak iş mantığı yürütmek gerektiğinde, Pre image eski değeri, Target veya Post image ise yeni değeri sağlar. Bu karşılaştırma, yalnızca değişen alanlarla sınırlı kalmayan kontroller için de kullanılabilir.
+
+== Image Kaydetme
+
+Image'ler, Plugin Registration Tool'da step kaydı sırasında veya sonradan step üzerinde düzenleme yapılarak tanımlanır. Bir step'e sağ tıklanıp "Register New Image" seçildiğinde, image yapılandırma penceresi açılır. Bu pencerede şu ayarlar yapılır:
+
+- **Name:** Image'in takma adıdır. Kodda bu adla image'e erişilir. Yaygın kullanımda Pre image için `preImage`, Post image için `postImage` ismi verilir.
+- **Image Type:** `Pre Image` veya `Post Image` seçilir.
+- **Attributes:** Image'in hangi alanları içereceği belirlenir. Performans açısından yalnızca ihtiyaç duyulan alanların seçilmesi önerilir. Tüm alanları seçmek için "Select All" kullanılabilir; ancak bu, her işlemde kaydın tüm alanlarının okunmasına neden olur.
+
+Bir step için birden fazla Pre image ve birden fazla Post image tanımlanabilir. Her birinin farklı bir takma adı olmak zorundadır.
+
+== Pre Image Kullanımı
+
+Pre image, Pre-Operation ve Post-Operation aşamalarında kullanılabilir. Create mesajında kayıt henüz var olmadığı için Pre image boştur. Update ve Delete mesajlarında ise kaydın değişmeden önceki tüm alanlarını taşır.
+
+Aşağıdaki örnek, bir lead güncellendiğinde, lead'in önceki konusunu (topic) loglayan bir plugin parçasıdır. Target'ta yalnızca değişen alanlar olduğu için, eski konu değeri Pre image'den alınır:
+
+[source,csharp]
+----
+if (context.PreEntityImages.Contains("preImage"))
+{
+    Entity preImage = context.PreEntityImages["preImage"];
+    string eskiKonu = preImage.GetAttributeValue<string>("subject");
+    
+    // Loglama veya karşılaştırma
+    if (eskiKonu != null)
+    {
+        // Eski konu değeriyle işlem yap
+    }
+}
+----
+
+Pre image, özellikle Update mesajında değişmeyen alanları okumak için vazgeçilmezdir. Target'ta bulunmayan `ownerid`, `statuscode`, `createdon` gibi alanlara Pre image üzerinden erişilir.
+
+== Post Image Kullanımı
+
+Post image, yalnızca Post-Operation aşamasında kullanılabilir. Pre-Operation aşamasında işlem henüz tamamlanmadığı için Post image mevcut değildir. Post image, kaydın işlem sonrası tüm alanlarını içerir.
+
+Create mesajında Post image, yeni oluşturulan kaydın GUID dahil tüm alanlarını taşır. Update mesajında ise kaydın güncellenmiş halini içerir. Delete mesajında Post image genellikle boştur; çünkü kayıt silindikten sonra erişilebilir bir görüntüsü kalmaz.
+
+Aşağıdaki örnek, bir lead oluşturulduktan sonra, oluşturulan lead'in GUID'ini ve tam konusunu Post image üzerinden alır:
+
+[source,csharp]
+----
+if (context.PostEntityImages.Contains("postImage"))
+{
+    Entity postImage = context.PostEntityImages["postImage"];
+    Guid leadId = postImage.Id;
+    string konu = postImage.GetAttributeValue<string>("subject");
+    
+    // Başka bir sistemde kayıt oluşturma veya bildirim gönderme
+}
+----
+
+Post image, kaydın son halini başka bir işleme girdi olarak vermek gerektiğinde idealdir. Ancak Post image'in kullanılabilmesi için plugin'in Post-Operation aşamasına kaydedilmiş olması zorunludur.
+
+== Hangi Aşamada Hangi Image Kullanılır?
+
+Özetlemek gerekirse:
+
+- **Pre-Operation:** Pre image mevcuttur (Create hariç). Post image mevcut değildir. Bu aşamada kaydın eski hali okunabilir ve Target üzerinde değişiklik yapılabilir.
+- **Post-Operation:** Hem Pre image hem Post image mevcuttur (Create'te yalnızca Post image, Delete'te yalnızca Pre image bulunur). Bu aşamada kayıt artık yazılmıştır; değişiklik yapmak için ayrı bir Update çağrısı gerekir.
+
+== Birden Fazla Image Tanımlama
+
+Bir step için birden fazla Pre image veya Post image tanımlanabilir. Her biri farklı bir takma ad taşır ve farklı alan kümelerini içerebilir. Bu yöntem, bir image'in tüm alanları taşımasının getirdiği performans yükünden kaçınmak için kullanılır. Örneğin bir Pre image yalnızca `ownerid` ve `statuscode` alanlarını içerirken, başka bir Pre image `subject` ve `companyname` alanlarını içerebilir. Plugin, ihtiyacına göre hangi image'i kullanacağını seçer.
+
+[source,csharp]
+----
+if (context.PreEntityImages.Contains("preImageBasic"))
+{
+    Entity preBasic = context.PreEntityImages["preImageBasic"];
+    EntityReference owner = preBasic.GetAttributeValue<EntityReference>("ownerid");
+}
+
+if (context.PreEntityImages.Contains("preImageDetail"))
+{
+    Entity preDetail = context.PreEntityImages["preImageDetail"];
+    string subject = preDetail.GetAttributeValue<string>("subject");
+}
+----
+
+== Performans
+
+Her image, Dataverse tarafında ek bir veri okuma işlemi anlamına gelir. Tüm alanları seçmek (`Select All`), kaydın tüm sütunlarının okunmasına neden olur ve işlem süresini uzatır. Bu nedenle yalnızca plugin'in gerçekten ihtiyaç duyduğu alanlar image'e dahil edilmelidir. Gereksiz alanları image'e eklemek, hem veri tabanı hem de ağ açısından maliyet yaratır.
+
+== Sonuç
+
+Pre ve Post entity image'ler, plugin'in tetiklendiği anda kaydın önceki ve sonraki tam görüntülerine erişmesini sağlayan güçlü araçlardır. Target'ın yalnızca değişen alanları taşıdığı Update senaryolarında, değişmeyen alanlara erişimin tek yoludur. Doğru aşamada doğru image tipinin seçilmesi ve image'lerin yalnızca ihtiyaç duyulan alanlarla sınırlandırılması, hem işlevsel doğruluk hem de performans açısından önem taşır. Bir sonraki yazıda, plugin'lerde hata yönetimi ve loglama konusu ele alınacaktır.

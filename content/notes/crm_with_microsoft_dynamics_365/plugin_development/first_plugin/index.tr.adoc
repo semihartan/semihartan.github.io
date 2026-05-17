@@ -1,0 +1,110 @@
+---
+title: "İlk Plugin: Yazma, Derleme ve Kaydetme"
+date: "2026-05-16T12:49:03+03:00"
+draft: false
+weight: 2
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Plugin mimarisini ve execution pipeline'ı önceki yazıda ele aldık. Bu yazıda, teorik bilgiyi pratiğe dökecek ve çalışan ilk plugin'i sıfırdan oluşturacağız. Bir plugin projesi oluşturulacak, temel sınıf yapısı incelenecek, basit bir iş mantığı yazılacak, derlenecek, Plugin Registration Tool ile Dataverse ortamına kaydedilecek ve son olarak Dynamics 365 arayüzünden test edilecektir. Örnek senaryo olarak, yeni bir lead oluşturulduğunda lead'in konusunu (topic) otomatik olarak büyük harfe çeviren bir plugin yazılacaktır.
+
+== Proje Oluşturma
+
+Visual Studio 2022'yi açın ve yeni bir proje oluşturun. Proje şablonu olarak "Class Library" seçin. Proje adını `SamplePlugin` olarak belirleyin ve çözümü kaydedin. Plugin projeleri .NET Framework 4.6.2 veya üzerini hedeflemek zorundadır. Proje oluşturulduktan sonra, Solution Explorer'da projeye sağ tıklayıp Properties'i açın ve Target framework'ün .NET Framework 4.6.2 olduğundan emin olun.
+
+İlk iş olarak, varsayılan olarak gelen `Class1.cs` dosyasını silin. Projeye sağ tıklayıp Add > New Item ile yeni bir sınıf ekleyin ve adını `CreateLeadPlugin.cs` olarak verin.
+
+== NuGet Paketleri
+
+Plugin geliştirmek için `Microsoft.CrmSdk.CoreAssemblies` NuGet paketine ihtiyaç vardır. Solution Explorer'da projeye sağ tıklayın, "Manage NuGet Packages" seçeneğine tıklayın. Browse sekmesinde `Microsoft.CrmSdk.CoreAssemblies` paketini arayın ve yükleyin. Bu paket, plugin arayüzlerini, context sınıflarını ve Organization Service ile çalışmak için gerekli tüm referansları projeye ekler.
+
+== Plugin Sınıfı
+
+`CreateLeadPlugin.cs` dosyasını açın ve aşağıdaki kodu yazın:
+
+[source,csharp]
+----
+using System;
+using Microsoft.Xrm.Sdk;
+
+namespace SamplePlugin
+{
+    public class CreateLeadPlugin : IPlugin
+    {
+        public void Execute(IServiceProvider serviceProvider)
+        {
+            // Execution context'i al
+            IPluginExecutionContext context =
+                (IPluginExecutionContext)serviceProvider.GetService(
+                    typeof(IPluginExecutionContext));
+
+            // Hedef entity'yi al
+            if (context.InputParameters.Contains("Target") &&
+                context.InputParameters["Target"] is Entity)
+            {
+                Entity target = (Entity)context.InputParameters["Target"];
+
+                // Yalnızca lead oluşturulurken çalış
+                if (target.LogicalName != "lead")
+                    return;
+
+                // Topic alanını büyük harfe çevir
+                if (target.Attributes.Contains("subject"))
+                {
+                    string subject = (string)target.Attributes["subject"];
+                    target.Attributes["subject"] = subject.ToUpperInvariant();
+                }
+            }
+        }
+    }
+}
+----
+
+Bu sınıf, `IPlugin` arayüzünü uygular. `IPlugin`, plugin'in giriş noktası olan tek bir `Execute` metodu tanımlar. `Execute` metodu, plugin her tetiklendiğinde platform tarafından çağrılır. Parametre olarak gelen `IServiceProvider`, Dataverse servislerine ve çalışma bağlamına erişim sağlar.
+
+`IPluginExecutionContext`, plugin'in tetiklendiği olayla ilgili tüm bilgiyi taşır. `InputParameters` koleksiyonu, işlemin hedef kaydını (Target) ve varsa diğer parametrelerini içerir. Hedef kayıt, bir `Entity` nesnesidir ve `LogicalName` ile hangi tabloya ait olduğu, `Attributes` ile de alan değerleri okunabilir veya değiştirilebilir.
+
+Kod, önce hedefin var olduğunu ve bir Entity olduğunu kontrol eder. Ardından `LogicalName` ile yalnızca lead tablosunda çalıştığından emin olur. Son olarak `subject` alanını okuyup büyük harfe çevirerek tekrar hedefe yazar.
+
+== Derleme ve İmzalama
+
+Plugin assembly'sinin Dataverse'e yüklenebilmesi için imzalanması gerekir. Solution Explorer'da projeye sağ tıklayın, Properties'i açın, Signing sekmesine gidin. "Sign the assembly" kutusunu işaretleyin. Açılan listeden `<New...>` seçeneğini seçin. Bir anahtar dosya adı verin (örneğin `SamplePlugin.snk`) ve isteğe bağlı olarak parola belirleyin.
+
+Projeyi derlemek için Build > Build Solution menüsünü kullanın. Derleme başarılı olduğunda, çıktı klasöründe (`bin\Debug`) `SamplePlugin.dll` dosyası oluşacaktır.
+
+== Plugin Registration Tool ile Kaydetme
+
+Plugin Registration Tool'u (PRT) başlatın. Daha önce kurulumunu yaptığınız bu araç, `pac tool prt` komutuyla açılabilir. PRT açıldığında, "Create New Connection" ile Dataverse ortamınıza bağlanın. Oturum açma ekranında ortam URL'sini girin ve kimlik doğrulamasını tamamlayın.
+
+Bağlantı kurulduktan sonra şu adımları izleyin:
+
+1. **Assembly Kaydı:** Sol paneldeki bağlı ortama sağ tıklayın ve "Register > Register New Assembly" seçeneğini seçin. Dosya seçme penceresinde, derlediğiniz `SamplePlugin.dll` dosyasını gösterin. Adımın (Step) kayıt konumu olarak "SandBox" seçili olduğundan emin olun. "Register Selected Plugins" butonuna tıklayın.
+
+2. **Step Kaydı:** Assembly başarıyla kaydedildikten sonra, PRT otomatik olarak yeni bir step (adım) oluşturma ekranına geçer. Burada plugin'in hangi olayda ve hangi aşamada çalışacağını belirlersiniz. Aşağıdaki değerleri girin:
+   - **Message:** Create
+   - **Primary Entity:** lead
+   - **Filtering Attributes:** subject (plugin yalnızca subject alanı değiştiğinde tetiklenecekse; aksi halde boş bırakılabilir)
+   - **Event Pipeline Stage of Execution:** Pre-Operation
+   - **Execution Mode:** Synchronous
+
+   "Register New Step" butonuna tıklayın.
+
+Bu adımlar tamamlandığında, plugin Dataverse'e kaydedilmiş ve Create olayının Pre-Operation aşamasına bağlanmış olur.
+
+== Test Etme
+
+Plugin'in doğru çalıştığını doğrulamak için Dynamics 365 Sales uygulamasına gidin. Sol menüden Leads sekmesine tıklayın. "New" butonuna basarak yeni bir lead oluşturun. Topic alanına küçük harflerle bir değer girin, örneğin "yeni müşteri talebi". Diğer zorunlu alanları doldurup kaydedin.
+
+Kaydettikten sonra aynı lead kaydını açın. Topic alanının "YENİ MÜŞTERİ TALEBİ" olarak büyük harfe dönüştüğünü göreceksiniz. Bu, plugin'in Pre-Operation aşamasında hedefi değiştirdiğini ve değişikliğin veri tabanına yansıdığını kanıtlar.
+
+Eğer plugin çalışmazsa, PRT'de step kaydını kontrol edin. Message'ın "Create", Entity'nin "lead" ve aşamanın "Pre-Operation" olduğundan emin olun. Ayrıca plugin assembly'sinin durumunun "Active" olduğunu doğrulayın. Hata ayıklama için ilerleyen yazılarda ele alınacak olan tracing mekanizması kullanılabilir.
+
+== Sonuç
+
+Bu yazıda, bir plugin projesi sıfırdan oluşturuldu, `IPlugin` arayüzü uygulandı, `IPluginExecutionContext` ile hedef kayda erişildi, alan değeri değiştirildi, assembly derlenip imzalandı ve Plugin Registration Tool ile Dataverse ortamına kaydedildi. Plugin başarıyla test edildi ve bir lead oluşturulduğunda konunun büyük harfe dönüştüğü görüldü. Bir sonraki yazıda, context nesnesi derinlemesine incelenecek; `InputParameters`, `OutputParameters`, `PreEntityImages` ve `PostEntityImages` gibi bileşenler ele alınacaktır.

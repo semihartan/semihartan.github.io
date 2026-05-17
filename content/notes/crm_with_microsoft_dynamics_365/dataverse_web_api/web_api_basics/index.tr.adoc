@@ -1,0 +1,121 @@
+---
+title: "Web API Temelleri"
+date: "2026-05-16T13:18:12+03:00"
+draft: false
+weight: 1
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Dataverse ile programatik olarak etkileşim kurmanın iki ana yolu vardır. İlki, plugin'lerde ve .NET uygulamalarında kullanılan Organization Service'tir. İkincisi ise HTTP üzerinden erişilebilen, platformdan ve dilden bağımsız çalışan Web API'dir. Web API, OData protokolünü temel alan bir RESTful servistir. Bu yazıda, REST ve OData kavramları tanıtılacak, ardından Dataverse Web API'nin yapısı, uç noktaları ve temel kullanım biçimi ele alınacaktır.
+
+== REST
+
+REST (Representational State Transfer), web servisleri için bir mimari stildir. Kaynakları URL'lerle tanımlar ve bu kaynaklar üzerinde standart HTTP fiilleriyle (GET, POST, PUT, PATCH, DELETE) işlem yapılmasını önerir. Her istek bağımsızdır; sunucu, istekler arasında istemciye dair bir durum (state) saklamaz. Bu, RESTful servislerin ölçeklenebilir ve basit olmasını sağlar.
+
+Dataverse Web API de REST prensiplerine uyar. Her tablo bir kaynak koleksiyonu olarak, her kayıt ise o koleksiyonun bir öğesi olarak URL'lerle adreslenir. Örneğin `accounts` koleksiyonu tüm müşteri hesaplarını temsil ederken, `accounts(00000000-0000-0000-0000-000000000001)` belirli bir hesap kaydını temsil eder. İstemci, bu URL'lere HTTP fiilleri göndererek kayıtları sorgular, oluşturur, günceller veya siler.
+
+== OData
+
+OData (Open Data Protocol), RESTful API'ler için standartlaştırılmış bir sorgulama ve veri erişim protokolüdür. OData, URL parametreleri aracılığıyla filtreleme, sıralama, sayfalama, ilişkili kayıtları genişletme ve belirli alanları seçme gibi işlemleri tanımlar. Bu sayede istemciler, ihtiyaç duydukları veriyi tam olarak şekillendirebilir.
+
+Dataverse Web API, OData 4.0 standardını kullanır. Sorgu seçenekleri URL sorgu dizgisinde `$select`, `$filter`, `$orderby`, `$expand`, `$top`, `$skip` gibi parametrelerle ifade edilir. Örneğin, adı "Contoso" ile başlayan ve şehri "İstanbul" olan hesapları, yalnızca ad ve şehir alanlarını getirerek, ada göre sıralı şekilde listelemek için şöyle bir URL kullanılır:
+/accounts?select=name,address1_city&filter=startswith(name,'Contoso') and address1_city eq 'İstanbul'&$orderby=name
+
+Bu sorgulama gücü, istemcinin yalnızca ihtiyaç duyduğu veriyi çekmesini sağlar ve ağ trafiğini azaltır.
+
+== Dataverse Web API
+
+Dataverse Web API, Dataverse ortamındaki verilere ve işlemlere HTTP üzerinden erişim sağlayan bir OData servisidir. Kök uç noktası şu formattadır:
+https://<ortam_adı>.api.crm.dynamics.com/api/data/v9.2/
+
+`v9.2` sürüm numarasıdır ve API'nin hangi sürümüne istek yapıldığını belirtir. Her yeni sürüm, geriye dönük uyumluluğu koruyarak yeni özellikler ekler. Uygulamalar, hedefledikleri sürümü URL'de belirtmelidir.
+
+API'ye yapılan her istek, geçerli bir erişim belirteci (access token) taşımak zorundadır. Kimlik doğrulama, Microsoft Entra ID üzerinden OAuth 2.0 ile yapılır. İstemci, Entra ID'den aldığı belirteci `Authorization` başlığına `Bearer` ön ekiyle ekler.
+
+Web API, JSON formatını kullanır. İstek ve yanıt gövdeleri JSON'dır. İstek başlığında `Content-Type: application/json` ve `Accept: application/json` belirtilmelidir.
+
+== Temel İşlemler
+
+Web API üzerinden yapılan işlemler, standart HTTP fiilleriyle gerçekleştirilir:
+
+- **GET:** Kayıtları sorgular. Tek bir kayıt veya koleksiyon dönebilir.
+- **POST:** Yeni bir kayıt oluşturur.
+- **PATCH:** Mevcut bir kaydı günceller (kısmi güncelleme).
+- **DELETE:** Bir kaydı siler.
+
+Örnek olarak, tüm aktif hesapları listeleyen bir GET isteği şöyle olur:
+
+[source,http]
+----
+GET /api/data/v9.2/accounts?$filter=statecode eq 0 HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Accept: application/json
+----
+
+Yanıt, JSON formatında bir `value` dizisi içerir:
+
+[source,json]
+----
+{
+  "@odata.context": "https://myorg.api.crm.dynamics.com/api/data/v9.2/$metadata#accounts",
+  "value": [
+    {
+      "@odata.etag": "W/\"123456\"",
+      "accountid": "00000000-0000-0000-0000-000000000001",
+      "name": "Contoso Ltd.",
+      "address1_city": "İstanbul"
+    }
+  ]
+}
+----
+
+Yeni bir hesap oluşturmak için POST kullanılır:
+
+[source,http]
+----
+POST /api/data/v9.2/accounts HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "name": "Yeni Şirket",
+  "address1_city": "Ankara"
+}
+----
+
+Sunucu, oluşturulan kaydın ID'sini `OData-EntityId` başlığında döner.
+
+Bir kaydı güncellemek için PATCH kullanılır. İstek gövdesinde yalnızca değişecek alanlar yer alır:
+
+[source,http]
+----
+PATCH /api/data/v9.2/accounts(00000000-0000-0000-0000-000000000001) HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "name": "Contoso Holding"
+}
+----
+
+Bir kaydı silmek için DELETE kullanılır:
+
+[source,http]
+----
+DELETE /api/data/v9.2/accounts(00000000-0000-0000-0000-000000000001) HTTP/1.1
+Host: myorg.api.crm.dynamics.com
+Authorization: Bearer <token>
+----
+
+== Sonuç
+
+Dataverse Web API, REST ve OData standartlarını kullanarak Dataverse verilerine HTTP üzerinden erişim sağlar. JSON tabanlı yapısı, hemen hemen her programlama dilinden ve platformdan Dataverse ile etkileşim kurmayı mümkün kılar. Bu yazıda temel kavramlar ve basit işlemler özetlenmiştir. Bir sonraki yazıda, Web API üzerinden CRUD işlemleri ayrıntılı olarak incelenecek; kayıt oluşturma, sorgulama, güncelleme ve silme senaryoları daha karmaşık örneklerle ele alınacaktır.

@@ -1,0 +1,215 @@
+---
+title: "Webhook ve Service Bus Entegrasyonu"
+date: "2026-05-16T13:18:16+03:00"
+draft: false
+weight: 2
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Plugin'den doğrudan HTTP çağrısı yapmak basit senaryolar için yeterli olsa da, üretim ortamında bu yaklaşım bazı riskler taşır. Ağ kesintisi, Function'ın geçici olarak kullanılamaması veya yoğunluk nedeniyle isteğin zamanında işlenememesi, veri kaybına veya tutarsızlığa yol açabilir. Ayrıca plugin içinde yapılan HTTP çağrısı, plugin'in çalışma süresine eklenir ve transaction'ın bir parçası olmadığı halde kullanıcıyı bekletir. Dataverse, bu sorunları çözmek için iki yerleşik entegrasyon mekanizması sunar: Webhook ve Service Bus. Her ikisi de, plugin'den bağımsız, güvenilir ve ölçeklenebilir bir şekilde dış sistemlere olay bildirimi yapmayı sağlar. Bu yazıda her iki mekanizmanın yapısı, yapılandırması ve kullanım senaryoları ele alınmaktadır.
+
+== Webhook
+
+Webhook, Dataverse'te bir olay gerçekleştiğinde, önceden tanımlanmış bir HTTP uç noktasına otomatik olarak istek gönderen bir mekanizmadır. Plugin'e benzer şekilde bir step (adım) olarak kaydedilir; ancak plugin assembly'si yerine bir URL taşır.
+
+=== Webhook Nasıl Çalışır?
+
+Bir kayıt oluşturulduğunda, güncellendiğinde veya silindiğinde, Dataverse ilgili webhook step'ini tetikler. Step'te tanımlanan HTTP uç noktasına, olayla ilgili bilgileri içeren bir JSON gövdesiyle POST isteği gönderilir. İstek, `x-ms-dynamics-*` özel başlıklarıyla zenginleştirilir.
+
+Webhook isteği, Dataverse'in kendi altyapısı tarafından, plugin'den bağımsız olarak gönderilir. Plugin pipeline'ında yer kaplamaz. İstek başarısız olursa, Dataverse belirli bir stratejiyle yeniden dener. Varsayılan olarak, ilk denemeden sonra 1 dakika, 5 dakika, 15 dakika ve 30 dakika aralıklarla toplam 5 deneme yapılır. Bu, geçici ağ sorunlarına veya alıcı servisteki kısa süreli kesintilere karşı dayanıklılık sağlar.
+
+=== Webhook Kaydı
+
+Webhook, Plugin Registration Tool (PRT) kullanılarak kaydedilir. PRT'de "Register" menüsünden "Register New WebHook" seçilir. Açılan formda şu alanlar doldurulur:
+
+- **Name:** Webhook'un adıdır. Örneğin "Fatura Oluşturma Webhook'u".
+- **Endpoint URL:** İsteğin gönderileceği HTTP uç noktasıdır. Azure Function URL'si veya herhangi bir HTTP alıcısı olabilir.
+- **Authentication Type:** Uç noktaya gönderilen isteğin kimlik doğrulama türüdür. `WebhookKey` (özel bir başlıkta anahtar gönderir), `HttpHeader` (belirtilen başlıkta özel bir değer gönderir) veya `HttpQueryString` (URL sorgu dizgisine anahtar ekler) seçenekleri vardır. Üretim ortamında `WebhookKey` önerilir.
+- **Value:** Kimlik doğrulama için kullanılacak anahtar değeridir.
+
+Webhook kaydedildikten sonra, tıpkı bir plugin step'i gibi bir step oluşturulur. Message, Entity, Stage ve diğer filtreler bu step'te tanımlanır. Webhook step'leri yalnızca Post-Operation aşamasında ve asynchronous olarak çalışabilir. Bu, webhook'un ana işlemi bekletmemesini ve transaction'dan bağımsız olmasını sağlar.
+
+=== Webhook Alıcısı
+
+Webhook alıcısı, gelen HTTP isteğini işleyen herhangi bir uygulama olabilir. Aşağıda, Azure Function'da çalışan ve gelen webhook isteğini doğrulayıp işleyen bir örnek verilmiştir:
+
+[source,csharp]
+----
+public static class FaturaWebhookFunction
+{
+    [FunctionName("FaturaWebhook")]
+    public static async Task<IActionResult> Run(
+        [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequest req,
+        ILogger log)
+    {
+        // Webhook anahtarını doğrula
+        if (!req.Headers.TryGetValue("x-ms-dynamics-webhook-key", 
+                out StringValues headerKey) ||
+            headerKey != Environment.GetEnvironmentVariable("WebhookKey"))
+        {
+            return new UnauthorizedResult();
+        }
+
+        string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+        log.LogInformation("Webhook çağrıldı. Gövde: {0}", requestBody);
+
+        // JSON'u işle
+        dynamic context = JsonConvert.DeserializeObject(requestBody);
+        string messageName = context.MessageName;
+        string entityName = context.PrimaryEntityName;
+        Guid entityId = context.PrimaryEntityId;
+
+        // Sadece fırsat kazanıldığında işlem yap
+        if (messageName != "Update" || entityName != "opportunity")
+            return new OkResult();
+
+        // Burada fatura oluşturma veya dış sistem entegrasyonu yapılır
+        await ProcessOpportunity(entityId, log);
+
+        return new OkResult();
+    }
+
+    private static async Task ProcessOpportunity(Guid opportunityId, ILogger log)
+    {
+        // Dataverse'e bağlan, fırsatı sorgula, fatura oluştur...
+        log.LogInformation("Fırsat işleniyor: {0}", opportunityId);
+        await Task.CompletedTask;
+    }
+}
+----
+
+Webhook gövdesi, `IPluginExecutionContext`'in JSON serileştirilmiş halidir. `MessageName`, `PrimaryEntityName`, `PrimaryEntityId` gibi temel alanların yanı sıra, step kaydedilirken tanımlanmışsa PreImage ve PostImage'leri de içerir.
+
+=== Webhook'un Sınırları
+
+Webhook isteklerinin gövde boyutu 256 KB ile sınırlıdır. Büyük veri taşıması gereken senaryolarda, webhook yalnızca kaydın ID'sini taşımalı, alıcı taraf bu ID ile Dataverse'ten kaydı sorgulamalıdır.
+
+Webhook, tam olarak bir kez teslimat (exactly-once delivery) garantisi vermez. Ağ sorunları veya yeniden denemeler nedeniyle aynı olay birden fazla kez gönderilebilir. Alıcının bu durumu idempotent (tekrarlanan çağrılarda aynı sonucu üreten) olacak şekilde tasarlanması gerekir.
+
+== Service Bus Entegrasyonu
+
+Service Bus, Azure'un tam yönetilen kurumsal mesajlaşma hizmetidir. Dataverse, bir olay gerçekleştiğinde Service Bus kuyruğuna veya konusuna mesaj gönderebilir. Bu mesaj, bir Azure Function, Logic App veya başka bir servis tarafından alınarak işlenir.
+
+=== Service Bus Neden Tercih Edilir?
+
+Webhook'un aksine, Service Bus mesajları kuyrukta (queue) veya konu aboneliklerinde (topic subscription) birikir. Alıcı servis çevrimdışı olsa bile mesajlar kaybolmaz; servis tekrar çalışır hale geldiğinde mesajları sırayla işler. Service Bus, en az bir kez teslimat (at-least-once delivery) garantisi ve kuyrukta bekletme (peek-lock) mekanizmasıyla güvenilir mesajlaşma sağlar.
+
+Ayrıca Service Bus, mesajları oturumlara (session) bölebilir, yinelenen mesajları otomatik olarak algılayıp atabilir (duplicate detection) ve belirli bir süre işlenemeyen mesajları otomatik olarak sahipsiz mesaj kuyruğuna (dead-letter queue) taşıyabilir. Bu özellikler, kurumsal düzeyde entegrasyon senaryoları için kritik önem taşır.
+
+=== Dataverse'te Service Bus Yapılandırması
+
+Service Bus entegrasyonu, Dataverse'te bir Service Endpoint kaydı oluşturularak yapılandırılır. Bu kayıt, Dataverse'in hangi Service Bus ad alanına (namespace), hangi kuyruğa veya konuya mesaj göndereceğini ve hangi kimlik doğrulama yöntemiyle bağlanacağını tanımlar.
+
+Power Platform Admin Center'da veya doğrudan Dataverse'te Settings > Customizations > Developer Resources bölümünden Service Endpoint oluşturulabilir. Alternatif olarak, Plugin Registration Tool'da "Register New Service Endpoint" seçeneğiyle de kayıt yapılabilir.
+
+Service Endpoint oluşturulurken şu alanlar doldurulur:
+
+- **Name:** Uç noktanın adı.
+- **Namespace Format:** Service Bus ad alanının formatı. Azure Service Bus için `sb://` ön eki kullanılır.
+- **Namespace Address:** Service Bus ad alanının tam adresi. Örneğin `sb://myorg-bus.servicebus.windows.net`.
+- **Message Queue Name:** Mesajların gönderileceği kuyruk veya konu adı.
+- **Contract:** Mesaj formatıdır. `Queue` (temel kuyruk), `Topic` (konu ve abonelik) veya `OneWay` (yalnızca gönderim, yanıt beklenmez) olabilir.
+- **Authentication Mode:** Service Bus'a bağlanmak için kullanılacak kimlik doğrulama yöntemi. `ACS` (Access Control Service, eski yöntem) veya `SASKey` (Shared Access Signature) seçilebilir.
+
+Service Endpoint oluşturulduktan sonra, Plugin Registration Tool'da bir step kaydedilir. Bu step'in mesajı "Azure Service Bus" olarak seçilir ve oluşturulan Service Endpoint ile ilişkilendirilir. Step, tıpkı bir plugin gibi belirli bir mesaj, entity ve aşamaya bağlanabilir.
+
+=== Service Bus Mesajı Gönderme
+
+Dataverse, step tetiklendiğinde Service Bus kuyruğuna veya konusuna bir `RemoteExecutionContext` nesnesi gönderir. Bu nesne, plugin'in `IPluginExecutionContext`'i ile aynı bilgileri taşır; ancak binary olarak serileştirilir.
+
+Geliştiricinin mesajı göndermek için ayrıca kod yazması gerekmez. Dataverse, step tanımına dayanarak mesajı otomatik olarak oluşturur ve Service Bus'a iletir.
+
+=== Service Bus Mesajı Alma
+
+Service Bus mesajını almak için en yaygın yöntem, Azure Function'da Service Bus tetikleyicisi kullanmaktır. Function, kuyruğa yeni bir mesaj geldiğinde otomatik olarak tetiklenir.
+
+Aşağıda, Service Bus kuyruğundan gelen Dataverse mesajını işleyen bir Azure Function örneği verilmiştir:
+
+[source,csharp]
+----
+public static class ServiceBusFunction
+{
+    [FunctionName("ProcessDataverseMessage")]
+    public static async Task Run(
+        [ServiceBusTrigger("myqueue", Connection = "ServiceBusConnection")]
+        string messageBody,
+        ILogger log)
+    {
+        log.LogInformation("Service Bus mesajı alındı.");
+
+        // RemoteExecutionContext'i deserialize et
+        var formatter = new BinaryFormatter();
+        byte[] messageBytes = Convert.FromBase64String(messageBody);
+
+        using (MemoryStream stream = new MemoryStream(messageBytes))
+        {
+            var context = (RemoteExecutionContext)formatter.Deserialize(stream);
+
+            log.LogInformation("Message: {0}, Entity: {1}, Id: {2}",
+                context.MessageName,
+                context.PrimaryEntityName,
+                context.PrimaryEntityId);
+
+            // İş mantığını yürüt
+            if (context.MessageName == "Create" &&
+                context.PrimaryEntityName == "account")
+            {
+                // Yeni hesap oluşturuldu, entegrasyon işlemleri...
+            }
+        }
+
+        await Task.CompletedTask;
+    }
+}
+----
+
+`RemoteExecutionContext`, Dataverse SDK'sında yer alan bir sınıftır. `Microsoft.CrmSdk.CoreAssemblies` paketi projeye eklenmelidir.
+
+Service Bus tetikleyicili Function, mesajı başarıyla işlediğinde Service Bus'a otomatik olarak onay gönderir ve mesaj kuyruktan silinir. Eğer Function bir istisna fırlatırsa, Service Bus mesajı yeniden kuyruğa koyar ve belirli bir yeniden deneme politikasına göre tekrar dener. Maksimum deneme sayısı aşıldığında, mesaj sahipsiz mesaj kuyruğuna (dead-letter queue) taşınır.
+
+=== Service Bus ile Plugin'den Mesaj Gönderme
+
+Bazı senaryolarda, mesajın otomatik değil, plugin içinden programatik olarak gönderilmesi gerekebilir. Örneğin mesaj gövdesi, standart `RemoteExecutionContext`'ten daha zengin veya farklı bir yapıda olabilir. Bu durumda plugin, Azure Service Bus SDK'sını kullanarak doğrudan kuyruğa mesaj gönderebilir.
+
+[source,csharp]
+----
+// Plugin içinde Service Bus'a mesaj gönderme
+string connectionString = Environment.GetEnvironmentVariable("ServiceBusConnection");
+string queueName = "myqueue";
+
+await using ServiceBusClient client = new ServiceBusClient(connectionString);
+ServiceBusSender sender = client.CreateSender(queueName);
+
+var payload = new
+{
+    EventType = "OpportunityWon",
+    OpportunityId = opportunityId,
+    Timestamp = DateTime.UtcNow
+};
+
+string json = JsonConvert.SerializeObject(payload);
+ServiceBusMessage message = new ServiceBusMessage(Encoding.UTF8.GetBytes(json));
+message.MessageId = opportunityId.ToString(); // Tekrarı önlemek için
+
+await sender.SendMessageAsync(message);
+----
+
+Bu yöntem, Dataverse'in otomatik Service Bus step'ine göre daha esnektir; ancak mesaj gönderiminin plugin süresine eklendiği unutulmamalıdır. Uzun süren gönderimler plugin zaman aşımına yol açabilir. Bu nedenle, gönderim işleminin `Task.Run` ile fire-and-forget yapılması veya asynchronous bir plugin'e bırakılması önerilir.
+
+== Webhook ve Service Bus Arasında Seçim
+
+Webhook, yapılandırması basit, maliyeti düşük ve HTTP bilen herhangi bir sisteme entegre edilebilen hafif bir çözümdür. Yeniden deneme mekanizması vardır; ancak uzun süreli kesintilerde mesajlar kaybolabilir. Düşük ve orta kritiklikteki senaryolar için uygundur.
+
+Service Bus, kurumsal düzeyde güvenilirlik, mesaj kalıcılığı ve gelişmiş kuyruk yönetimi sunar. Kuyrukta biriken mesajlar, alıcı servis günlerce çevrimdışı kalsa bile korunur. Yüksek kritiklikteki, mali kayıp riski taşıyan veya mevzuat gereği izlenebilir olması gereken entegrasyonlar için doğru seçimdir.
+
+İki yöntem bir arada da kullanılabilir. Webhook, hafif ve hızlı bildirimler için kullanılırken, Service Bus yüksek hacimli ve kritik veri akışları için ayrı bir kanal olarak yapılandırılabilir.
+
+== Sonuç
+
+Webhook ve Service Bus, Dataverse'ten dış sistemlere olay bildirimi yapmanın iki güvenilir yoludur. Webhook, HTTP uç noktalarına basit ve hızlı bildirim göndermek için uygundur. Service Bus ise kalıcı mesajlaşma, yeniden deneme ve kuyruk yönetimiyle kurumsal düzeyde entegrasyon sağlar. Her ikisi de plugin'den bağımsız, asynchronous olarak çalışarak kullanıcı deneyimini etkilemeden işlemleri dışarıya taşır. Seçim, senaryonun kritiklik düzeyine, hacmine ve alıcı sistemin özelliklerine göre yapılır. Bu yazıyla birlikte Azure Entegrasyonu bölümü tamamlanmıştır. Bir sonraki bölümde, veri entegrasyonu konularına giriş yapılacaktır.

@@ -1,0 +1,79 @@
+---
+title: "Çözümler ve Uygulama Yaşam Döngüsü Yönetimi (ALM)"
+date: "2026-05-15T22:55:56+03:00"
+draft: false
+weight: 5
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Dynamics 365 ve Power Platform üzerinde yapılan her özelleştirme —yeni bir tablo, değiştirilmiş bir form, eklenmiş bir iş akışı veya yazılmış bir plugin— bir varlık olarak yönetilmek zorundadır. Bu varlıkların paketlenmesi, sürümlerinin takip edilmesi ve farklı ortamlar arasında taşınması, platformun çözüm (solution) mekanizması ve uygulama yaşam döngüsü yönetimi (ALM) pratikleriyle sağlanır. Bu yazıda, çözüm kavramı, çözüm türleri, yayımcılar, katmanlar ve ALM sürecinin temel adımları ele alınmaktadır.
+
+== Çözüm Kavramı
+
+Çözüm, Dataverse ortamında yapılan özelleştirmelerin bir araya getirildiği bir pakettir. Bir çözüm; tablolar, sütunlar, formlar, görünümler, iş süreçleri, plugin'ler, web kaynakları ve güvenlik rolleri gibi bileşenleri içerebilir. Çözümün amacı, bu bileşenleri tek bir birim olarak yönetmek, sürümlemek ve başka ortamlara taşımaktır.
+
+Platformda yapılan her değişiklik mutlaka bir çözüm içinde yer alır. Eğer geliştirici bir çözüm oluşturmazsa, tüm özelleştirmeler sistemin varsayılan çözümüne (Default Solution) kaydedilir. Varsayılan çözüm, ortamdaki tüm bileşenleri barındıran dev bir pakettir. Ancak bu çözümle çalışmak, bileşenleri ayrıştırmayı ve belirli bir işlevselliği izole etmeyi zorlaştırır. Bu nedenle, kurumsal geliştirme süreçlerinde her bir işlevsellik için ayrı bir çözüm oluşturulması önerilir.
+
+== Çözüm Türleri
+
+Dataverse'te iki tür çözüm vardır: yönetilmeyen (unmanaged) ve yönetilen (managed). Bu iki tür, özelleştirmelerin yaşam döngüsünde farklı roller üstlenir.
+
+=== Yönetilmeyen Çözüm
+
+Yönetilmeyen çözüm, geliştirme aşamasında kullanılan açık pakettir. Geliştirici, bu çözüm içinde tablo ekleyebilir, form değiştirebilir, yeni sütunlar oluşturabilir ve plugin yazabilir. Çözümün içindeki tüm bileşenler tamamen düzenlenebilir durumdadır. Yönetilmeyen çözüm, geliştirme ortamından test ortamına taşınırken de kullanılabilir; ancak üretim ortamına dağıtım için uygun değildir.
+
+Yönetilmeyen çözümün en önemli özelliği, ortamdan kaldırıldığında yalnızca çözüm paketinin silinmesi, içindeki bileşenlerin ortamda kalmaya devam etmesidir. Bu, geliştirme sırasında esneklik sağlar; ancak üretim ortamında kontrolsüz bileşen bırakma riski taşır.
+
+=== Yönetilen Çözüm
+
+Yönetilen çözüm, dağıtım aşamasında kullanılan kilitli pakettir. Üretim ortamına yalnızca yönetilen çözüm olarak dağıtım yapılır. Yönetilen çözümün içindeki bileşenler doğrudan düzenlenemez; yalnızca çözümün tanıdığı özelleştirme noktaları üzerinden genişletilebilir.
+
+Yönetilen çözümün en önemli özelliği, ortamdan kaldırıldığında içindeki tüm bileşenlerin de ortamdan silinmesidir. Bu, üretim ortamında temiz bir kaldırma süreci garanti eder ve yetim bileşen bırakma riskini ortadan kaldırır. Yönetilen çözümler aynı zamanda sürüm numarası taşır; bu sayede bir çözümün hangi sürümünün hangi ortamda yüklü olduğu takip edilebilir.
+
+== Yayımcı
+
+Her çözüm, bir yayımcıya (publisher) ait olmak zorundadır. Yayımcı, çözümü oluşturan kuruluşu veya geliştiriciyi temsil eden bir kimliktir. Yayımcının adı, e-posta adresi ve bir ön ek (prefix) içerir. Bu ön ek, çözüm içinde oluşturulan tüm özel bileşenlerin adının başına otomatik olarak eklenir. Örneğin ön eki `crmserisi` olan bir yayımcıya ait çözümde oluşturulan bir tablo, sistemde `crmserisi_yenitablo` olarak görünür.
+
+Yayımcı ön eki, farklı çözümlerden gelen bileşenlerin isim çakışmasını önler. Aynı ortamda birden fazla yayımcının çözümü bulunabilir; her biri kendi ön ekiyle bileşenlerini birbirinden ayırır. Yayımcı, çözüm oluşturulduktan sonra değiştirilemez; bu nedenle çözüm oluşturmadan önce doğru yayımcının seçildiğinden emin olunmalıdır.
+
+== Katmanlar
+
+Aynı bileşen üzerinde birden fazla çözüm değişiklik yaptığında, bu değişiklikler katmanlar (layers) halinde birikir. Dataverse, her çözümün getirdiği değişikliği ayrı bir katman olarak saklar ve bu katmanları belirli bir sırayla uygulayarak son kullanıcıya görünen hali oluşturur.
+
+Katman sıralaması şöyledir: En altta sistem katmanı bulunur; bu, bileşenin platformla gelen orijinal halidir. Onun üzerinde yönetilmeyen çözümlerin getirdiği değişiklikler yer alır. En üstte ise yönetilen çözümler bulunur. Bir bileşen üzerinde birden fazla yönetilen çözüm değişiklik yapmışsa, bu çözümler arasında yükleme tarihine göre bir sıralama yapılır. Son yüklenen çözümün katmanı en üstte yer alır ve son kullanıcıya görünen hali o belirler.
+
+Katman kavramı, özellikle birden fazla bağımsız çözümün aynı bileşeni değiştirdiği durumlarda önem kazanır. Bir çözüm bir formun genişliğini değiştirirken, başka bir çözüm aynı forma yeni bir sekme eklemiş olabilir. Katmanlar sayesinde her iki değişiklik de korunur ve birleştirilmiş bir sonuç üretilir. Ancak iki çözüm aynı özelliği farklı şekilde değiştiriyorsa, en üstteki katmanın değeri geçerli olur.
+
+== Uygulama Yaşam Döngüsü Yönetimi (ALM)
+
+ALM, özelleştirmelerin geliştirme ortamından test ortamına ve oradan üretim ortamına kontrollü bir şekilde taşınmasını sağlayan süreçler bütünüdür. Dynamics 365 ve Power Platform'da ALM, çözüm mekanizması üzerine kuruludur.
+
+=== Ortam Tipleri
+
+Tipik bir ALM kurulumunda üç ortam bulunur. Geliştirme ortamı (development), tüm özelleştirmelerin yapıldığı yerdir. Bu ortamda çalışma yönetilmeyen çözümle yürütülür. Geliştiriciler, burada tablolar ekler, formlar değiştirir, plugin yazar ve test eder.
+
+Test ortamı (test veya staging), geliştirme ortamından gelen değişikliklerin son kullanıcı senaryolarıyla sınandığı yerdir. Bu ortama dağıtım genellikle yönetilen çözümle yapılır; böylece üretim ortamına gidecek paketin birebir aynısı test edilmiş olur.
+
+Üretim ortamı (production), son kullanıcıların gerçek iş süreçlerini yürüttüğü canlı ortamdır. Bu ortama yalnızca testten geçmiş yönetilen çözümler dağıtılır. Doğrudan üretim ortamında geliştirme yapmak, platformun en iyi uygulamalarına aykırıdır; çünkü bu, kontrolsüz değişikliklere ve veri kaybı riskine yol açar.
+
+=== Çözüm Taşıma
+
+Çözüm taşıma işlemi, kaynak ortamdan dışa aktarma (export) ve hedef ortama içe aktarma (import) olmak üzere iki adımda gerçekleşir. Dışa aktarma sırasında, çözüm yönetilen veya yönetilmeyen olarak paketlenir. İçe aktarma sırasında ise paketteki tüm bileşenler hedef ortama yazılır.
+
+Çözüm taşınırken bağımlılıklar (dependencies) kontrol edilir. Bir çözüm, başka bir çözümdeki bileşene referans veriyorsa, o çözümün önce hedef ortamda yüklü olması gerekir. Bağımlılık zinciri kırıksa içe aktarma başarısız olur. Bu nedenle, çözümler arası bağımlılıkların belgelenmesi ve takip edilmesi ALM sürecinin önemli bir parçasıdır.
+
+=== Sürüm Yönetimi
+
+Her çözüm bir sürüm numarası taşır. Bu numara `major.minor.build.revision` formatındadır. Sürüm numarası, içe aktarma sırasında kontrol edilir. Aynı çözümün daha eski bir sürümü, daha yeni bir sürümün üzerine yüklenemez. Bu kural, geriye dönük uyumsuz değişikliklerin canlı ortama girmesini engeller.
+
+Çözüme yapılan her değişiklikte sürüm numarasının güncellenmesi gerekir. Büyük değişiklikler major veya minor numarayı, küçük düzeltmeler ise build veya revision numarasını artırır. Sürüm numarası, hangi ortamda hangi sürümün çalıştığını takip etmenin tek güvenilir yoludur.
+
+== Sonuç
+
+Çözümler ve ALM, Dynamics 365 ve Power Platform'da profesyonel geliştirme sürecinin omurgasıdır. Çözüm, özelleştirmeleri paketler ve sürümlendirir; yönetilmeyen çözüm geliştirme esnekliği sunarken, yönetilen çözüm üretim ortamında kontrol ve temizlik sağlar. Katmanlar, farklı çözümlerden gelen değişikliklerin bir arada yaşamasına imkan tanır. ALM ise bu paketlerin ortamlar arasında güvenli, tekrarlanabilir ve izlenebilir şekilde taşınmasını garanti eder. Bu temel üzerine, bir sonraki yazıda kodsuz özelleştirme konularına giriş yapılacak; iş kuralları ve business process flow'lar ele alınacaktır.

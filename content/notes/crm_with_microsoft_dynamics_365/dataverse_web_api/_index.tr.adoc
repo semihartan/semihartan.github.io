@@ -1,0 +1,11 @@
+---
+title: "Dataverse Web API"
+date: "2026-05-16T13:18:12+03:00"
+draft: false
+weight: 5
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}

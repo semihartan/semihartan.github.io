@@ -1,0 +1,133 @@
+---
+title: "CRM Nedir?"
+date: "2026-05-13T17:40:49+03:00"
+draft: false
+weight: 2
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:sectnums:
+:toc-title: {{< toc-title >}}
+
+
+== Giriş
+
+Önceki yazımızda, CRM kavramının bir günde ortaya çıkmadığını; küçük esnafın kişisel hafızasından dijital iletişim yöneticilerine, oradan satış gücü otomasyonuna ve nihayet modern bütünleşik platformlara uzanan uzun bir evrimin ürünü olduğunu gördük. Bu evrim, bize CRM'in "nasıl" ve "neden" doğduğu sorularının cevabını verdi. Ancak daha temel bir soru hâlâ yanıtsız: CRM tam olarak nedir? Bu bölüm, CRM'i bir kavram olarak tanımlamayı, onu oluşturan yapı taşlarını ayrıştırmayı ve iş dünyasındaki gerçek karşılığını ortaya koymayı amaçlamaktadır.
+
+== CRM'in Tanımı
+
+En yalın haliyle CRM, İngilizce Customer Relationship Management sözcüklerinin baş harflerinden oluşur ve Türkçeye Müşteri İlişkileri Yönetimi olarak çevrilir. Ancak bu çeviri, kavramın derinliğini tam olarak yansıtmaz. Zira CRM, yalnızca müşteri ilişkilerini "yönetmek"ten ibaret bir eylem değil; bir organizasyonun müşteriyle olan tüm etkileşimlerini anlama, planlama, yürütme ve sürekli iyileştirme disiplinidir.
+
+Daha kapsamlı bir tanım vermek gerekirse CRM; bir işletmenin mevcut ve potansiyel müşterileriyle kurduğu tüm ilişkileri, yaşam döngüsü boyunca merkezi bir anlayışla ele alan; bunu yaparken strateji, süreç ve teknolojiyi bir araya getiren; nihai amacı müşteri memnuniyetini, sadakatini ve müşteriden elde edilen değeri artırmak olan bütüncül bir yönetim yaklaşımıdır.
+
+Bu tanımın içinde dikkat edilmesi gereken birkaç kritik nokta vardır. İlki, CRM'in yalnızca mevcut müşterileri değil, potansiyel müşterileri de kapsamasıdır. İkincisi, yaşam döngüsü ifadesiyle kastedilen, müşteriyle ilk temas anından satış sonrası hizmetlere ve hatta ilişkinin sona ermesine kadar uzanan geniş bir zaman aralığıdır. Üçüncüsü ve belki de en önemlisi, CRM'in bir yönetim yaklaşımı olarak nitelendirilmesidir. Bu, CRM'i salt bir yazılım kategorisi olarak görmenin ötesine geçmemiz gerektiğini vurgular.
+
+== CRM'in Üç Ayağı
+
+CRM'i anlamanın en doğru yolu, onu birbirini tamamlayan üç temel bileşenin kesişimi olarak ele almaktır. Bu bileşenlerden herhangi biri eksik olduğunda, CRM girişimi eksik kalır ve beklenen faydayı sağlamaz.
+
+=== Strateji
+
+CRM'in ilk ve en temel ayağı stratejidir. Strateji olmadan CRM, kimsenin kullanmadığı pahalı bir veri tabanından ibarettir. Peki CRM stratejisi ne anlama gelir?
+
+CRM stratejisi, bir organizasyonun tüm kararlarını müşteri perspektifinden almayı bilinçli olarak seçmesidir. Bu, "müşteri her zaman haklıdır" gibi yüzeysel bir slogandan çok daha derin bir dönüşümü ifade eder. Şirket, hangi müşteri segmentlerine odaklanacağını, bu segmentlere hangi değer önerisiyle gideceğini, müşteri deneyimini nasıl farklılaştıracağını ve tüm bunları hangi metriklerle ölçeceğini net bir şekilde tanımlar.
+
+Örneğin bir B2B yazılım şirketi, CRM stratejisini "yüksek değerli kurumsal müşterilere kişiselleştirilmiş danışmanlık hizmeti sunarak uzun vadeli ortaklıklar kurmak" olarak belirleyebilir. Bu strateji, şirketin satış ekibinin nasıl yapılandırılacağından, pazarlama bütçesinin hangi kanallara ayrılacağına, hatta ürün geliştirme önceliklerine kadar her şeyi etkiler. Strateji net değilse, CRM yazılımı hangi verinin önemli olduğunu, hangi sürecin otomatize edilmesi gerektiğini, hangi raporun öncelikli olduğunu bilemez.
+
+Stratejinin önemli bir alt boyutu da müşteri segmentasyonu ve müşteri yaşam boyu değeri (Customer Lifetime Value — CLV) gibi kavramlardır. CRM stratejisi, tüm müşterilere aynı şekilde davranmak yerine, müşterileri değerlerine ve ihtiyaçlarına göre farklılaştırmayı gerektirir. Bu da stratejik bir bakış açısı olmadan mümkün değildir.
+
+=== Süreç
+
+Strateji, CRM'in "ne yapmak istediğini" tanımlar. Süreç ise bunun "nasıl yapılacağını" ortaya koyar. CRM süreçleri, müşteriyle kurulan tüm etkileşimlerin tekrarlanabilir, ölçülebilir ve iyileştirilebilir adımlara dönüştürülmüş halidir.
+
+Bir örnek üzerinden ilerleyelim. Bir şirket, web sitesinden gelen bir form doldurulduğunda şu süreci işletmek isteyebilir: Form, önce pazarlama ekibine düşer; ekip, formu dolduran kişiyi bir potansiyel müşteri adayı (lead) olarak kaydeder ve belirli kriterlere göre puanlar. Eğer lead yeterli puana ulaşırsa, otomatik olarak satış ekibine atanır. Satış temsilcisi, lead'i belirli bir süre içinde (örneğin 24 saat) aramakla yükümlüdür. Aramazsa, sistem otomatik olarak bir hatırlatma gönderir veya lead'i başka bir temsilciye yönlendirir. Bu zincirleme adımlar, bir CRM sürecini oluşturur.
+
+Süreçlerin yazılı olarak tanımlanması, CRM'in başarısı için kritiktir. Birçok CRM projesi, "önce yazılımı kuralım, süreçleri sonra oturturuz" yaklaşımıyla başarısız olmuştur. Oysa doğru olan, süreçlerin önce kağıt üzerinde, yazılımdan bağımsız olarak netleştirilmesidir. Hangi adımda kimin ne yapacağı, hangi karar noktalarının olduğu, hangi çıktıların beklendiği belirlenmeden bir CRM yazılımını yapılandırmaya çalışmak, temelsiz bir bina inşa etmeye benzer.
+
+Süreçler aynı zamanda iş akışı otomasyonunun da temelini oluşturur. İyi tanımlanmış bir süreç, CRM platformunda otomatik hale getirilebilir; böylece manuel adımlardan kaynaklanan gecikmeler, hatalar ve unutkanlıklar ortadan kalkar. Bu noktada teknoloji devreye girer.
+
+=== Teknoloji
+
+Strateji ve süreç konuşulduktan sonra sıra genellikle yazılıma gelir. Çünkü yazılım, CRM'in elle tutulan, ekranda görünen, bütçesi konuşulan tarafıdır. Ne var ki görünürlüğü, onu diğer iki ayaktan daha önemli yapmaz. Teknoloji; stratejinin belirlediği yolda, süreçlerin çizdiği adımları mümkün kılan, hızlandıran ve ölçeklendiren araçtır. Stratejisi olmayan bir şirkette CRM yazılımı kurmak, pusulasız bir gemiye motor takmaya benzer. Daha hızlı gidersiniz ama yanlış yöne.
+
+Peki bugün "CRM teknolojisi" dendiğinde ne anlaşılır? En temelde, müşteriyle ilgili her türlü veriyi tek bir merkezde toplayan; bu veriye satış, pazarlama, hizmet gibi farklı ekiplerin kendi rollerine uygun şekilde erişmesini sağlayan; tekrar eden işleri otomatik olarak yürüten ve tüm bunların üzerine raporlama katmanı ekleyen yazılım platformlarıdır. Salesforce, Microsoft Dynamics 365, HubSpot ve Zoho CRM gibi isimler bu pazarın önde gelen oyuncularıdır. Her birinin güçlü ve zayıf yanları, farklı ölçeklere ve sektörlere uygunlukları vardır; ama hepsinin altında yatan mantık ortaktır.
+
+Bu platformları anlamak için, sundukları beş temel yeteneğe yakından bakmak faydalı olur.
+
+İlki merkezi veri tabanıdır. CRM'den önceki dünyada müşteri adresleri bir yerde, satın alma geçmişi başka bir yerde, şikayet kayıtları bambaşka bir yerde dururdu. CRM, tüm bu kayıtları —müşterileri, adayları, fırsatları, destek taleplerini— tek bir çatı altında toplar. Bu sayede bir satış temsilcisi müşteriyle görüşmeden önce aynı kaydın içinde hem geçmiş siparişleri hem de son altı ayda açılmış destek taleplerini görebilir.
+
+İkincisi çok kanallı etkileşim yönetimidir. Günümüzde bir müşteri sabah e-posta atar, öğlen sosyal medyadan yazar, akşam telefonla arar. CRM bu kanalların her birinden gelen teması aynı müşteri kaydının altında birleştirir. Böylece müşteri, kanal değiştirdi diye hikayesini yeniden anlatmak zorunda kalmaz. Hizmet ekibi de "biz bu konuyu zaten e-postada cevaplamıştık" durumuna düşmez.
+
+Üçüncüsü iş akışı otomasyonudur. Daha önce tanımlanan süreçlerin manuel takibine son verir. Örneğin web sitesinden bir form doldurulduğunda CRM, o formu otomatik olarak bir lead'e dönüştürebilir, lead'i doğru satış temsilcisine atayabilir ve temsilciye bir bildirim gönderebilir. Temsilci belirli bir süre içinde aksiyon almazsa, sistem lead'i başka birine yönlendirecek şekilde de kurgulanabilir. Bu tür bir otomasyon, unutkanlıktan ya da yoğunluktan doğan kayıpları büyük ölçüde ortadan kaldırır.
+
+Dördüncüsü raporlama ve analitiktir. CRM, içinde biriken veriyi anlamlı çıktılara dönüştürebilir. Satış döngüsünün hangi aşamasında fırsatların kaybedildiğini, hangi pazarlama kampanyasının en yüksek dönüşümü sağladığını, hangi müşteri segmentinin daha kârlı olduğunu görselleştirilmiş panolarla sunar. Bu, yöneticinin artık sezgileriyle değil rakamlarla yönetmesinin altyapısıdır.
+
+Beşincisi entegrasyon yeteneğidir. CRM nadiren tek başına çalışır. Şirketin bir ERP sistemi vardır; fatura orada kesilir, stok orada takip edilir. Bir muhasebe yazılımı vardır. Bir e-posta pazarlama aracı vardır. CRM'in tüm bu sistemlerle konuşabilmesi, veriyi çift yönlü olarak aktarabilmesi gerekir. Aksi takdirde CRM, diğerlerinden kopuk bir ada haline gelir ve 360 derece müşteri görünümü hayali suya düşer.
+
+Bütün bu yeteneklerin etrafında döndüğü eksen ise tek bir sorudur: Bu teknoloji, stratejiyi ve süreci ne kadar iyi destekliyor? Stratejisi net olmayan bir şirket, en pahalı CRM platformunu da alsa onu verimli kullanamaz. Tersinden bakıldığında, süreçleri karmaşık ve olgun bir şirket, çok basit bir araçla bu süreçleri yönetmeye çalışırsa yine tökezler. Doğru teknoloji, iki uç arasındaki dengedir: stratejinin ihtiyaç duyduğu ölçüde güçlü, süreçlerin gerektirdiği ölçüde esnek.
+
+== Yanlış Anlaşılmalar
+
+CRM'in ne olduğunu anlamak kadar, ne olmadığını anlamak da önemlidir. Yaygın bazı yanılgıları ele alalım:
+
+CRM sadece bir yazılım değildir. Bu yazının ana tezi de budur. Yazılım, CRM'in teknoloji ayağını oluşturur; ancak strateji ve süreç olmadan eksik kalır.
+
+CRM sadece satış departmanının aracı değildir. CRM, tarihsel olarak satış gücü otomasyonundan doğmuş olsa da bugün pazarlama, müşteri hizmetleri ve hatta operasyon ekiplerini kapsayan bütüncül bir platformdur.
+
+CRM bir veri ambarı veya depolama aracı değildir. CRM, veriyi yalnızca saklamaz; o veriyi eyleme dönüştürür. Bir müşteri kaydını açıp bakmak için değil; o müşteriye bir sonraki en iyi teklifi sunmak, bir sorununu öngörmek veya bir fırsatı yakalamak için kullanılır.
+
+CRM'in faydası hemen görülmez. CRM, bir gecede sonuç üreten bir sihirli değnek değildir. Veri birikimi, süreçlerin oturması ve kullanıcı adaptasyonu zaman alır. Sabır ve süreklilik gerektiren stratejik bir yatırımdır.
+
+== CRM'in Kapsadığı İş Fonksiyonları
+
+Modern CRM, üç temel iş fonksiyonunu birbirine bağlar. Bu fonksiyonlar bazen "CRM üçgeni" olarak da adlandırılır.
+
+Satış Otomasyonu (Sales Force Automation - SFA): Potansiyel müşteri adaylarının (lead) yaratılması, nitelendirilmesi, fırsata dönüştürülmesi ve tekliften sözleşmeye kadar olan tüm satış sürecinin yönetilmesidir. Satış hunisi, fırsat yönetimi, satış tahmini gibi kavramlar bu alana girer.
+
+Pazarlama Otomasyonu (Marketing Automation): Kampanyaların planlanması, hedef kitle segmentasyonu, e-posta pazarlaması, lead skorlama (potansiyel müşteri puanlaması) ve pazarlama faaliyetlerinin geri dönüşünün (ROI) ölçülmesidir. Amaç, doğru zamanda doğru mesajla doğru müşteri adayına ulaşmaktır.
+
+Müşteri Hizmetleri ve Destek (Customer Service & Support): Müşterilerden gelen soru, şikayet, talep veya arıza bildirimlerinin kaydedilmesi, takip edilmesi ve çözüme ulaştırılmasıdır. Vaka (ticket) yönetimi, bilgi bankası (knowledge base), omni-channel (çok kanallı) müşteri iletişimi ve hizmet seviyesi anlaşmaları (SLA) bu alanın konularıdır.
+
+Bu üç fonksiyonun ortak bir veri tabanı üzerinde çalışması, "360 derece müşteri görünümü" denen kavramı mümkün kılar. Satış temsilcisi, bir müşteriyle görüşmeden önce o müşterinin son dönemde hangi pazarlama e-postalarını aldığını, açık bir destek talebi olup olmadığını ve geçmiş satın alımlarını aynı ekranda görebilir. Bu, müşteri deneyimini tutarlı ve kişiselleştirilmiş kılmanın anahtarıdır.
+
+== CRM'in İşletmeye Kattığı Değerler
+Bir organizasyon, CRM'i doğru şekilde benimsediğinde elde edeceği başlıca faydalar şunlardır:
+
+Müşteri Memnuniyeti ve Sadakatinin Artması: Müşteri kendini tanınmış ve değer verilmiş hisseder. Sorunları daha hızlı çözülür, ihtiyaçları daha iyi anlaşılır. Bu da tekrar satın almayı ve marka bağlılığını artırır.
+
+=== Operasyonel Verimlilik
+
+Bir CRM sistemi devreye girmeden önce, bir satış temsilcisinin gününün önemli bir kısmı satış dışı işlerle geçer. Müşteri bilgilerini Excel'de günceller, arama notlarını bir yerlere kopyalar, haftalık rapor için yöneticisine elle veri hazırlar. Pazarlama ekibi her yeni kampanya öncesinde hedef kitle listesini sıfırdan oluşturur; farklı sistemlerden, farklı departmanlardan veri toplamaya çalışır. Müşteri hizmetleri, arayan bir müşteriye her seferinde adını, soyadını, müşteri numarasını sordurur; çünkü önündeki ekranda yalnızca gelen çağrının numarası vardır. CRM, bu tabloyu tersine çevirir. Müşteriye dair tüm bilgi tek bir yerde toplandığı ve süreçler otomatize edildiği için, çalışanlar asli işlerine odaklanabilir. Satış elemanı CRM'de tıkladığı bir kaydın tüm geçmişini, iletişim notlarını ve açık fırsatlarını karşısında bulur. Pazarlamacı, kampanya listesini segmentasyon araçlarıyla dakikalar içinde çıkarır. Hizmet ekibi, çağrıyı yanıtlamadan önce müşterinin kim olduğunu, daha önce hangi sorunları yaşadığını ve açık bir destek talebi olup olmadığını görür.
+
+=== Veriye Dayalı Karar Alma
+
+Küçük bir işletmede yönetici, satışların neden düştüğünü ekibine sorarak ve kendi sezgilerine güvenerek anlamaya çalışabilir. Ancak büyüyen bir organizasyonda bu yöntem sürdürülebilir değildir. CRM, karar alma sürecinde sezginin yerini verinin almasını sağlar. Satış hunisinin hangi aşamasında fırsatların takıldığını, hangi müşteri segmentinden daha fazla dönüşüm alındığını, hangi pazarlama kanalının en yüksek yatırım getirisine sahip olduğunu somut rakamlarla gösterir. Bu, yöneticinin artık "bana öyle geliyor ki" yerine "verilere göre" diyerek konuşması anlamına gelir. Örneğin satış döngüsünün "teklif" aşamasında ortalamadan üç gün daha uzun süre bekleyen fırsatların kaybedilme olasılığının arttığını görmek, yöneticiye tam olarak nereye müdahale etmesi gerektiğini söyler. CRM, yönetimi bir tahmin oyunu olmaktan çıkarır.
+
+=== Kurumsal Hafızanın Korunması
+
+Bir satış temsilcisi işten ayrıldığında, yıllar içinde kurduğu müşteri ilişkileri, kafasındaki paha biçilmez bilgiler ve kişisel notları da onunla birlikte kapıdan çıkar. CRM'in olmadığı bir ortamda bu, şirket için sessiz bir felakettir. Yeni başlayan kişi aynı müşterileri sıfırdan tanımak zorunda kalır; geçmişte verilmiş sözlerden, konuşulmuş özel taleplerden, hatta basit bir fiyat mutabakatından haberi olmaz. Müşteri, kendini anlatmaktan yorulur ve "bu firma beni tanımıyor" duygusuna kapılır. CRM, müşteriyle ilgili bilgiyi bireyden alıp kuruma mal eder. Her telefon görüşmesi, her e-posta, her teklif revizyonu ve her toplantı notu kayıt altındadır. Çalışan değişse de müşteriyle ilişkinin sürekliliği kopmaz. Yeni gelen kişi, müşterinin CRM'deki kaydını açarak geçmişin tamamını görebilir ve selefinin bıraktığı yerden devam edebilir.
+
+=== Çapraz Satış ve Ek Gelir Fırsatları
+
+Mevcut bir müşteriye yeni bir ürün satmak, sıfırdan bir müşteri kazanmaktan çok daha az maliyetlidir. Ancak bunu yapabilmek için müşteriyi tanımak gerekir. Hangi ürünleri daha önce aldı? Hangi teklifleri reddetti? Hizmet ekibiyle son görüşmesinde hangi ihtiyacından bahsetti? Bu soruların cevabı bir yerde yoksa, çapraz satış çabası kaba bir tahminden ibaret kalır. CRM, müşterinin tüm geçmişini görünür kılarak satış ekibine doğru zamanda doğru teklifle gitme imkanı verir. Örneğin yazılım lisansı satın almış bir müşterinin, son altı ayda destek ekibine sık sık entegrasyon sorunlarıyla ilgili talepler açtığını gören bir satış temsilcisi, ona yeni bir modül değil, entegrasyon danışmanlığı paketi önermenin daha doğru olacağını bilir. Bu seviyede bir içgörü, CRM'in ham veriyi gelire dönüştürme gücünü örnekler.
+
+== Evrensel Prensipler
+
+Bugüne kadar yapılan sayısız CRM uygulaması, başarıyı getiren faktörlerin platformdan bağımsız olduğunu göstermiştir. İster dünyanın en büyük CRM yazılımını kullanın, ister orta ölçekli bir alternatifi, altta yatan prensipler değişmez. Bu prensipleri göz ardı eden projeler, teknoloji tarafında ne kadar güçlü olursa olsun, er ya da geç tökezler.
+
+Bunlardan ilki üst yönetim desteğidir. CRM bir departmanın satın aldığı bir araç değil, organizasyonun tamamını etkileyen bir çalışma biçimidir. Pazarlama müdürünün tek başına sahiplendiği bir CRM projesi, satış direktörü buna ikna olmadığı sürece yürümez. Çünkü satış ekibi, kendi müdürü önemsemediği sürece sisteme veri girmeye direnç gösterir. Üst yönetim yalnızca bütçeyi onaylayan değil, değişimi bizzat savunan ve örnek olan taraftır. Bu destek olmadan CRM, şirket genelinde benimsenmez ve zamanla rafa kalkar.
+
+İkincisi kullanıcı benimsemesidir. Bir CRM sistemi, onu her gün kullanması beklenen kişilere değer katmıyorsa, ne kadar gelişmiş olursa olsun başarısızdır. Satış temsilcisi, CRM'i yalnızca yöneticisinin kendisini takip ettiği bir kontrol aracı olarak görürse, sisteme olabildiğince az veri girer, notları yine kendi ajandasında tutar. Oysa aynı temsilci, CRM sayesinde müşterisinin doğum gününü hatırladığında, geçen ay konuşulan özel bir talebi unutmadığında ve bu sayede bir satışı sonuçlandırdığında, sistemi bir angarya olarak değil işini kolaylaştıran bir yardımcı olarak görmeye başlar. CRM'in kullanıcıya değer katacak şekilde tasarlanması ve kurgulanması, benimseme oranını doğrudan belirler.
+
+Üçüncü prensip veri kalitesidir. CRM'in değeri, içinde biriken veriyle doğru orantılıdır. Eksik girilmiş bir telefon numarası, güncellenmemiş bir unvan, yanlış atanmış bir sektör kodu... Bunlar küçük detaylar gibi görünür, ama ölçeklendiğinde ciddi sonuçlar doğurur. Yanlış veriyle beslenen bir CRM, yöneticiye yanlış raporlar üretir, pazarlamaya yanlış segmentler çıkarır, satışı yanlış fırsatlara yönlendirir. Bilişim dünyasının eski bir özdeyişi burada birebir geçerlidir: çöp girersen, çöp çıkarsın. Bu yüzden veri giriş standartları, zorunlu alanlar, düzenli veri temizliği ve kullanıcı eğitimi, CRM'in görünmeyen ama hayati altyapısıdır.
+
+Dördüncü ve son prensip sürekli iyileştirmedir. CRM bir defa kurulup bir daha dokunulmayacak bir sistem değildir. Şirketin stratejisi zamanla değişir, yeni ürün hatları eklenir, müşteri beklentileri evrilir, ekip yapısı dönüşür. Tüm bunlar oldukça CRM'in de buna ayak uydurması gerekir. İlk kurulumda mükemmel çalışan bir satış süreci, iki yıl sonra yetersiz kalabilir. Daha önce ihtiyaç duyulmayan bir rapor, şimdi kritik hale gelebilir. CRM'i yaşayan bir sistem olarak görmek, onu düzenli aralıklarla gözden geçirmek ve iyileştirmek gerekir. Aksi halde CRM, şirketin ihtiyaçlarını karşılamayan, atıl bir veri yığınına dönüşme riski taşır.
+
+== Sonuç
+
+CRM, bir yazılım ürününden çok daha fazlasıdır. Stratejik bir tercih, operasyonel bir çerçeve ve teknolojik bir altyapının birlikte var olduğu bir yönetim disiplinidir. Önceki yazıda ele aldığımız tarihsel yolculuk, CRM'in nasıl doğduğunu ve neden gerekli olduğunu gösterdi. Bu yazıda ise CRM'in ne olduğu sorusuna yanıt aradık; onu strateji, süreç ve teknoloji sacayağı üzerinde tanımladık.
+
+Bu temel anlayış, CRM kavramını herhangi bir platformun gölgesinde kalmadan, evrensel düzeyde kavramamızı sağlar. Artık CRM'in ne olduğunu bildiğimize göre, sıradaki soru şudur: Bir CRM sistemi hangi temel yapı taşlarından oluşur? Müşteri, aday, fırsat, vaka gibi kavramlar ne anlama gelir ve birbirleriyle nasıl ilişkilenir? Bir sonraki yazıda, CRM'in veri modelini ve temel varlıklarını (entities) platformdan bağımsız bir gözle inceleyeceğiz.
+

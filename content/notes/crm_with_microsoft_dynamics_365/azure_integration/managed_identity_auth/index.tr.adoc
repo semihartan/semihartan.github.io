@@ -1,0 +1,145 @@
+---
+title: "Managed Identity ile Kimlik Doğrulama"
+date: "2026-05-16T13:18:16+03:00"
+draft: false
+weight: 3
+---
+
+:stem:
+:rouge-style: {{ .Site.Params.rougeTheme }}
+:toc: left
+:toc-title: {{< toc-title >}}
+
+== Giriş
+
+Önceki yazıda Azure Functions'ın Dataverse Web API'ye bağlanmak için istemci gizli anahtarı (client secret) kullandığını gördük. Bu yöntem işlevsel olsa da, gizli anahtarların güvenli bir şekilde saklanması, düzenli olarak döndürülmesi ve sızma riskine karşı korunması gerekir. Üretim ortamlarında bu ek yük, güvenlik açıklarına ve bakım maliyetine yol açar. Azure, bu sorunu çözmek için Managed Identity (yönetilen kimlik) özelliğini sunar. Bu yazıda, Managed Identity'nin ne olduğu, nasıl yapılandırıldığı ve Dataverse ile nasıl kullanılacağı ele alınmaktadır.
+
+== Managed Identity Nedir?
+
+Managed Identity, Azure kaynaklarına (Functions, App Service, Sanal Makineler gibi) Microsoft Entra ID tarafından otomatik olarak yönetilen bir kimlik kazandıran özelliktir. Bu kimlikle uygulama, hiçbir gizli anahtar veya sertifika yönetmeden, Entra ID tarafından korunan kaynaklara erişebilir.
+
+İki tür Managed Identity vardır. Sistem tarafından atanan (system-assigned) kimlik, doğrudan bir Azure kaynağına bağlıdır. Kaynak silindiğinde kimlik de otomatik olarak silinir. Bir Function App'e bağlanan sistem kimliği, yalnızca o Function App tarafından kullanılabilir. Kullanıcı tarafından atanan (user-assigned) kimlik ise bağımsız bir Azure kaynağı olarak oluşturulur ve birden çok Azure hizmetine atanabilir. Aynı kimliğin birden çok Function App tarafından paylaşılması gerektiğinde bu tür tercih edilir.
+
+Managed Identity'nin en önemli avantajı, kimlik bilgilerinin yönetimini tamamen Azure'a devretmesidir. Geliştiricinin parola saklaması, döndürmesi veya koruması gerekmez. Azure, kimliğin arkasındaki sertifikayı otomatik olarak yönetir ve düzenli aralıklarla döndürür.
+
+== İstemci Gizli Anahtarı ile Karşılaştırma
+
+İstemci gizli anahtarı (client secret) yönteminde, uygulama kaydına ait bir gizli dize oluşturulur ve bu dize Azure Key Vault'ta, ortam değişkenlerinde veya yapılandırma dosyasında saklanır. Gizli anahtarın bir son kullanma tarihi vardır; süresi dolduğunda uygulama çalışmayı durdurur. Anahtarın döndürülmesi, uygulamanın yeniden dağıtımını veya yapılandırma güncellemesini gerektirir. Ayrıca, gizli anahtarın kazara bir kaynak kod deposuna sızması, ciddi bir güvenlik ihlaline yol açar.
+
+Managed Identity'de ise uygulamanın elinde hiçbir gizli dize yoktur. Azure altyapısı, uygulamanın çalıştığı sanal makine veya App Service ortamına bir sertifika enjekte eder. Uygulama, bu sertifikayı kullanarak Entra ID'den belirteç talep eder. Geliştirici, bu sürecin hiçbir aşamasında bir parola görmez veya yönetmez.
+
+== Azure Function'da Managed Identity Etkinleştirme
+
+Azure Function App'te Managed Identity etkinleştirmek birkaç tıklamayla yapılır. Azure Portal'da Function App kaynağına gidilir. Sol menüde "Identity" seçeneğine tıklanır. "System assigned" sekmesinde durum "On" olarak değiştirilir ve "Save" ile kaydedilir. Bu işlem, Function App için bir Entra ID kimliği oluşturur ve kimliğin Object ID'sini ekranda gösterir.
+
+Bu adım tamamlandığında, Function App'in artık Entra ID'de bir kimliği vardır. Ancak bu kimlik henüz hiçbir kaynağa erişemez. Erişim izinlerinin ayrıca verilmesi gerekir.
+
+== Dataverse'te Erişim Yetkisi Verme
+
+Managed Identity'nin Dataverse'e erişebilmesi için, bu kimliğin Dataverse'te bir uygulama kullanıcısı (application user) olarak tanımlanması gerekir. Uygulama kullanıcısı, insan kullanıcı yerine bir servis kimliğini temsil eder.
+
+Power Platform Admin Center'da ortam seçilir. Settings > Users + permissions > Application users bölümüne gidilir. "New app user" seçilir. Açılan formda, "App" alanına Managed Identity'nin bağlı olduğu uygulama kaydı seçilir. Bu, Function App ile aynı ada sahip olan veya daha önce oluşturulmuş bir kurumsal uygulamadır (enterprise application). "Business Unit" ve "Security Role" alanları doldurulur. Uygulama kullanıcısına, Function'ın Dataverse'te yapması gereken işlemlere uygun bir güvenlik rolü atanır.
+
+Bu adım, Function App'in Managed Identity'sine Dataverse içinde bir karşılık kazandırır. Artık Function, bu kimlikle Dataverse Web API'ye erişebilir.
+
+== MSAL ile Managed Identity Kullanımı
+
+C# kodunda Managed Identity ile belirteç almak için MSAL kütüphanesi kullanılır. İstemci gizli anahtarından farkı, `WithClientSecret` yerine `WithManagedIdentity` metodunun çağrılmasıdır.
+
+Aşağıdaki örnek, Azure Function içinde Managed Identity ile Dataverse için erişim belirteci alır:
+
+[source,csharp]
+----
+using Microsoft.Identity.Client;
+
+string resource = Environment.GetEnvironmentVariable("DataverseUrl");
+
+var app = ConfidentialClientApplicationBuilder
+    .Create("client-id-not-needed") // Managed Identity'de client ID zorunlu değildir
+    .WithManagedIdentity()
+    .Build();
+
+var result = await app.AcquireTokenForClient(
+        new[] { resource + "/.default" })
+    .ExecuteAsync();
+
+string token = result.AccessToken;
+----
+
+Eğer kullanıcı tarafından atanan bir Managed Identity kullanılıyorsa, `WithManagedIdentity` metoduna client ID parametresi geçilir:
+
+[source,csharp]
+----
+string userAssignedClientId = Environment.GetEnvironmentVariable("ManagedIdentityClientId");
+
+var app = ConfidentialClientApplicationBuilder
+    .Create(userAssignedClientId)
+    .WithManagedIdentity(userAssignedClientId)
+    .Build();
+----
+
+Alınan belirteç, daha önce olduğu gibi `Authorization: Bearer <token>` başlığıyla Dataverse isteklerinde kullanılır.
+
+== Function'dan Dataverse'e Tam Çağrı Örneği
+
+Aşağıda, Managed Identity ile Dataverse Web API'ye bağlanan ve bir fırsat kaydını sorgulayan eksiksiz bir Azure Function örneği verilmiştir:
+
+[source,csharp]
+----
+public static class GetOpportunityFunction
+{
+    [FunctionName("GetOpportunity")]
+    public static async Task<IActionResult> Run(
+        [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequest req,
+        ILogger log)
+    {
+        string opportunityId = req.Query["id"];
+
+        string resource = Environment.GetEnvironmentVariable("DataverseUrl");
+        string apiUrl = $"{resource}/api/data/v9.2/opportunities({opportunityId})" +
+                        "?$select=name,estimatedvalue,statecode";
+
+        var app = ConfidentialClientApplicationBuilder
+            .Create("dummy-client-id")
+            .WithManagedIdentity()
+            .Build();
+
+        var authResult = await app.AcquireTokenForClient(
+                new[] { resource + "/.default" })
+            .ExecuteAsync();
+
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", authResult.AccessToken);
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpResponseMessage response = await client.GetAsync(apiUrl);
+
+            if (response.IsSuccessStatusCode)
+            {
+                string content = await response.Content.ReadAsStringAsync();
+                return new OkObjectResult(JsonConvert.DeserializeObject(content));
+            }
+
+            log.LogError("Dataverse çağrısı başarısız. Status: {0}", response.StatusCode);
+            return new StatusCodeResult((int)response.StatusCode);
+        }
+    }
+}
+----
+
+Bu örnekte hiçbir istemci gizli anahtarı, bağlantı dizesi veya sertifika parmak izi yoktur. Function, yalnızca kendi Managed Identity'sine güvenerek Dataverse'e bağlanır.
+
+== Sınırlar ve Dikkat Edilmesi Gerekenler
+
+Managed Identity, yalnızca Azure üzerinde çalışan uygulamalar tarafından kullanılabilir. Yerel geliştirme ortamında Managed Identity taklit edilemez. Geliştirme sırasında, geliştiricinin kendi Entra ID hesabıyla (Azure CLI üzerinden `az login` ile) veya bir istemci gizli anahtarıyla çalışması gerekir. Ortam değişkenleriyle yönetilen bir yapılandırma anahtarı, üretimde Managed Identity'yi, geliştirmede ise alternatif bir yöntemi seçmeyi sağlar.
+
+Managed Identity ile alınan belirteç, uygulamanın kendi yetkileriyle çalışır. Dataverse'teki güvenlik rolü, uygulama kullanıcısına atanır. Bu rol ne kadar geniş olursa, Function o kadar geniş yetkiye sahip olur. En az yetki prensibi (least privilege) burada da geçerlidir; Function'a yalnızca ihtiyaç duyduğu tablolara ve işlemlere erişim verilmelidir.
+
+Managed Identity'nin belirteç önbellekleme davranışı MSAL tarafından yönetilir. MSAL, aldığı belirteci bellekte saklar ve süresi dolana kadar yeniden kullanır. Bu, her Function çağrısında yeni bir belirteç alınmasının önüne geçer.
+
+== Sonuç
+
+Managed Identity, Azure üzerinde çalışan uygulamalar için kimlik doğrulamanın en güvenli ve en az bakım gerektiren yoludur. Gizli anahtar yönetimi, döndürme ve saklama gibi sorumlulukları ortadan kaldırır. Dataverse tarafında uygulama kullanıcısı olarak tanımlandığında, tıpkı bir servis hesabı gibi rol tabanlı erişim denetimine tabi olur. Üretim ortamındaki her türlü Azure-Dataverse entegrasyonu için varsayılan tercih olmalıdır. Bir sonraki yazıda, daha karmaşık senaryolar için kullanılan Webhook ve Service Bus entegrasyonları ele alınacaktır.
