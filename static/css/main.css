@@ -59,12 +59,18 @@ header {
 }
 
 nav[aria-label="breadcrumb"] {
-    margin: 10px 25px;
+    margin: 25px 0px 25px 25px;
     margin-bottom: 1rem;
+    max-width: 70%;
+    padding: 4px;
+    border: 1px solid rgb(228, 227, 227);
+    border-radius: 3px;
+    background-color: rgb(241, 241, 241);
 }
 
 ol.breadcrumb {
     display: flex;
+    margin: 0;
     list-style: none;
     align-items: flex-start;
     justify-content: flex-start;
