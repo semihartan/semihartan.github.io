@@ -1,7 +1,7 @@
 {{ range . }}
   <details class="post-collapsable-list">
       <summary class="post-list-item">
-        <a class="post-list-item-title-link" href="{{ .RelPermalink }}">{{ .Title | humanize | title }}</a>
+        <a class="post-list-item-title-link" href="{{ .RelPermalink }}">{{ .Title }}</a>
       </summary>
     {{ partial "list-sections.html" .Sections }}
 
