@@ -1,6 +1,6 @@
 ---
-title: "Fundamentals"
-date: "2026-05-13T18:15:31+03:00"
+title: "Crm_entities_and_relations"
+date: "2026-05-17T17:05:57+03:00"
 draft: false
 ---
 
