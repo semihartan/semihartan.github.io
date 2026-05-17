@@ -2,7 +2,7 @@
 title: "Müşteri Yaşam Döngüsü ve CRM Süreçleri"
 date: "2026-05-14T13:04:33+03:00"
 draft: false
-weight: 5
+weight: 4
 ---
 
 :stem:

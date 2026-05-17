@@ -3,7 +3,7 @@ title: "CRM Türleri"
 date: "2026-05-14T13:22:57+03:00"
 draft: false
 needsImprovement: true
-weight: 6
+weight: 5
 ---
 
 :stem:
