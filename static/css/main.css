@@ -63,9 +63,9 @@ nav[aria-label="breadcrumb"] {
     margin-bottom: 1rem;
     max-width: 70%;
     padding: 4px;
-    border: 1px solid rgb(228, 227, 227);
+    border: 1px solid rgb(238, 237, 237);
     border-radius: 3px;
-    background-color: rgb(241, 241, 241);
+    background-color: rgb(243, 243, 243);
 }
 
 ol.breadcrumb {
@@ -430,6 +430,10 @@ ul.post-list {
         height: 100%;
         aspect-ratio: 16/9;
     }
+
+    nav[aria-label="breadcrumb"] {
+        max-width:max-content;
+    }   
 
     ol.breadcrumb::before {
         content: "■";
