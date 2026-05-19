@@ -5,11 +5,3 @@ title = 'Notlar'
 +++
 
 Bu bölüm çeşitli konular üzerine notlarımı içeriyor.
-
-*Organizasyon Şeması*:
-
-image::org_schema.jpg[Organizasyon Şeması]
-
-*Birim Şeması*:
-
-image::unit_schema.jpg[Birim Şeması]
